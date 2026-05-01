@@ -1,6 +1,6 @@
 """TreeNode model."""
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Index
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from datetime import datetime
 from app.database import Base
 
@@ -24,9 +24,9 @@ class TreeNode(Base):
     activity = relationship("Activity", back_populates="tree_nodes")
     children = relationship(
         "TreeNode",
-        remote_side=[id],
-        backref="parent",
+        backref=backref("parent", remote_side=[id]),
         cascade="all, delete-orphan",
+        single_parent=True,
     )
     speech_records = relationship("SpeechRecord", back_populates="tree_node", cascade="all, delete-orphan")
     teacher_reviews = relationship("TeacherReview", back_populates="tree_node", cascade="all, delete-orphan")

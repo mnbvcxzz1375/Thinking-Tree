@@ -78,7 +78,11 @@ export const useActivityStore = defineStore('activity', {
         if (params?.limit !== undefined) queryParams.limit = params.limit
         if (params?.active_only !== undefined) queryParams.active_only = params.active_only
 
-        this.activities = await api.get<Activity[]>('/api/activities', queryParams)
+        const { data, error } = await api.get<Activity[]>('/api/activities', queryParams)
+        if (error) {
+          throw new Error(error.message)
+        }
+        this.activities = data || []
       } catch (err: unknown) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch activities'
         console.error('Error fetching activities:', err)
@@ -95,7 +99,11 @@ export const useActivityStore = defineStore('activity', {
       this.error = null
       try {
         const api = useApi()
-        this.currentActivity = await api.get<Activity>(`/api/activities/${id}`)
+        const { data, error } = await api.get<Activity>(`/api/activities/${id}`)
+        if (error) {
+          throw new Error(error.message)
+        }
+        this.currentActivity = data
         return this.currentActivity
       } catch (err: unknown) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch activity'
@@ -114,8 +122,13 @@ export const useActivityStore = defineStore('activity', {
       this.error = null
       try {
         const api = useApi()
-        const newActivity = await api.post<Activity>('/api/activities', data)
-        this.activities.unshift(newActivity)
+        const { data: newActivity, error } = await api.post<Activity>('/api/activities', data)
+        if (error) {
+          throw new Error(error.message)
+        }
+        if (newActivity) {
+          this.activities.unshift(newActivity)
+        }
         return newActivity
       } catch (err: unknown) {
         this.error = err instanceof Error ? err.message : 'Failed to create activity'
@@ -134,17 +147,22 @@ export const useActivityStore = defineStore('activity', {
       this.error = null
       try {
         const api = useApi()
-        const updated = await api.put<Activity>(`/api/activities/${id}`, data)
-
-        // Update in list
-        const index = this.activities.findIndex((a) => a.id === id)
-        if (index !== -1) {
-          this.activities[index] = updated
+        const { data: updated, error } = await api.put<Activity>(`/api/activities/${id}`, data)
+        if (error) {
+          throw new Error(error.message)
         }
 
-        // Update current if viewing
-        if (this.currentActivity?.id === id) {
-          this.currentActivity = updated
+        // Update in list
+        if (updated) {
+          const index = this.activities.findIndex((a) => a.id === id)
+          if (index !== -1) {
+            this.activities[index] = updated
+          }
+
+          // Update current if viewing
+          if (this.currentActivity?.id === id) {
+            this.currentActivity = updated
+          }
         }
 
         return updated
@@ -165,7 +183,10 @@ export const useActivityStore = defineStore('activity', {
       this.error = null
       try {
         const api = useApi()
-        await api.del(`/api/activities/${id}`)
+        const { error } = await api.del(`/api/activities/${id}`)
+        if (error) {
+          throw new Error(error.message)
+        }
 
         // Remove from list
         this.activities = this.activities.filter((a) => a.id !== id)

@@ -1,6 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8765'
+const apiBase = process.env.NUXT_PUBLIC_API_BASE || ''
 const apiProxyTarget = apiBase.endsWith('/api') ? apiBase : `${apiBase.replace(/\/$/, '')}/api`
+const devApiTarget = apiBase ? apiProxyTarget : 'http://localhost:8765/api'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -49,7 +50,7 @@ export default defineNuxtConfig({
   nitro: {
     devProxy: {
       '/api': {
-        target: apiProxyTarget,
+        target: devApiTarget,
         changeOrigin: true,
       },
     },

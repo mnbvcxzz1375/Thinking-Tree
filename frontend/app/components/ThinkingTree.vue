@@ -30,6 +30,8 @@ const isNewNode = ref(false)
 const isAnalyzing = ref(false)
 const aiResponse = ref<any>(null)
 const recordingError = ref('')
+const similarNodes = ref<{ id: string; label: string }[]>([])
+const pendingNode = ref<{ node: TreeNode; parentId: string } | null>(null)
 
 let svg: d3.Selection<SVGSVGElement, unknown, null, undefined>
 let gContainer: d3.Selection<SVGGElement, unknown, null, undefined>
@@ -47,6 +49,7 @@ function restorePersistedTree() {
       id: string | null
       title: string
       description: string
+      instructions: string
       nodes: TreeNode[]
       selectedNodeId: string | null
       lastSynced: string | null
@@ -57,6 +60,7 @@ function restorePersistedTree() {
     treeStore.id = parsed.id ?? null
     treeStore.title = parsed.title || parsed.nodes[0]?.label || '思维树'
     treeStore.description = parsed.description || ''
+    treeStore.instructions = parsed.instructions || ''
     treeStore.nodes = parsed.nodes
     treeStore.selectedNodeId = parsed.selectedNodeId ?? null
     treeStore.lastSynced = parsed.lastSynced ?? null
@@ -102,23 +106,38 @@ function flattenNodeLabels(nodes: TreeNode[]): { id: string; label: string; cont
   ])
 }
 
+function buildTreeNode(node: TreeNode): { id: string; label: string; content: string; nodeType: string; children: any[] } {
+  return {
+    id: node.id,
+    label: node.label,
+    content: node.content,
+    nodeType: node.nodeType,
+    children: (node.children || []).map(child => buildTreeNode(child)),
+  }
+}
+
 function hasNodeId(nodes: TreeNode[], id: string): boolean {
   return nodes.some((node) => node.id === id || hasNodeId(node.children || [], id))
 }
 
+function findNodeById(nodes: TreeNode[], id: string): TreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    const found = findNodeById(node.children || [], id)
+    if (found) return found
+  }
+  return null
+}
+
 function buildSpeechTreeContext() {
   const root = treeStore.nodes[0]
-  const directions = (root?.children || []).map((direction) => ({
-    id: direction.id,
-    label: direction.label,
-    content: direction.content,
-    children: flattenNodeLabels(direction.children || []),
-  }))
+  const directions = (root?.children || []).map((direction) => buildTreeNode(direction))
 
   return {
     tree_id: treeStore.id,
     theme: treeStore.title || root?.label || '思维树',
     description: treeStore.description,
+    instructions: treeStore.instructions,
     root: root
       ? {
           id: root.id,
@@ -129,6 +148,40 @@ function buildSpeechTreeContext() {
     directions,
     total_nodes: flattenNodeLabels(treeStore.nodes).length,
   }
+}
+
+function normalizeIdeaText(value: string) {
+  return value
+    .replace(/[，。！？、,.!?;；：“”"'（）()\s]/g, '')
+    .replace(/这棵树|这个树|一棵树|树的/g, '树')
+    .trim()
+}
+
+function ideaSimilarity(a: string, b: string) {
+  const left = normalizeIdeaText(a)
+  const right = normalizeIdeaText(b)
+  if (!left || !right) return 0
+  if (left === right) return 1
+  if (left.includes(right) || right.includes(left)) {
+    return Math.min(left.length, right.length) / Math.max(left.length, right.length)
+  }
+  const leftChars = new Set([...left])
+  const rightChars = new Set([...right])
+  const intersection = [...leftChars].filter((char) => rightChars.has(char)).length
+  const union = new Set([...leftChars, ...rightChars]).size
+  return union > 0 ? intersection / union : 0
+}
+
+function getLocalSimilarSiblings(parentId: string, label: string, content: string) {
+  const parent = findNodeById(treeStore.nodes, parentId)
+  if (!parent) return []
+  return (parent.children || [])
+    .filter((node) => {
+      const labelScore = ideaSimilarity(label, node.label)
+      const contentScore = ideaSimilarity(content, node.content || node.label)
+      return Math.max(labelScore, contentScore) >= 0.72
+    })
+    .map((node) => ({ id: node.id, label: node.label }))
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -149,35 +202,86 @@ function buildRenderNodes(rootData: TreeNode, width: number, height: number): Re
   const safeRight = Math.min(width - 130, width * 0.85)
   const directionY = height * 0.39
 
+  // 节点最小间距配置 - 增大间距避免重叠
+  const MIN_NODE_SPACING = 130
+  const NODE_RADIUS = 55
+
   function placeChildren(parent: RenderNode, children: TreeNode[], depth: number, bandLeft: number, bandRight: number) {
     if (!children.length) return
 
-    const yStep = Math.max(76, Math.min(118, height * 0.12))
+    const yStep = Math.max(108, Math.min(150, height * 0.15))
     const baseY = directionY - (depth - 1) * yStep
-    const available = Math.max(90, bandRight - bandLeft)
+    const available = Math.max(150, bandRight - bandLeft)
+    const maxColumns = Math.max(1, Math.floor(available / MIN_NODE_SPACING))
+    const columns = Math.min(children.length, Math.max(1, maxColumns))
+    const rows = Math.ceil(children.length / columns)
+    const rowGap = Math.max(92, NODE_RADIUS * 1.85)
+    const actualSpacing = columns === 1 ? 0 : Math.max(MIN_NODE_SPACING, available / Math.max(columns - 1, 1))
 
     children.forEach((child, index) => {
-      const ratio = children.length === 1 ? 0.5 : index / (children.length - 1)
-      const jitter = children.length > 1 ? Math.sin(index * 1.7 + depth) * Math.min(34, available / 12) : 0
-      const x = clamp(bandLeft + ratio * available + jitter, 72, width - 72)
-      const y = clamp(baseY + Math.cos(index * 1.2 + depth) * (depth === 1 ? 42 : 28), 116, height - 180)
+      const row = Math.floor(index / columns)
+      const col = index % columns
+      const itemsInRow = row === rows - 1 ? children.length - row * columns : columns
+      const rowWidth = (itemsInRow - 1) * actualSpacing
+      const startX = bandLeft + (available - rowWidth) / 2
+      const rowOffset = rows > 1 ? (row - (rows - 1) / 2) * rowGap : 0
+      const jitterY = Math.sin(index * 1.5 + depth) * 8
+      const x = clamp(startX + col * actualSpacing, 84, width - 84)
+      const y = clamp(baseY + rowOffset + jitterY, 120, height - 170)
       const renderNode: RenderNode = { data: child, depth, x, y, parent }
       result.push(renderNode)
 
+      // 为子节点分配带宽
       const childCount = Math.max(1, child.children?.length ?? 0)
-      const childBand = Math.min(available / Math.max(children.length, 1), 220 + childCount * 34)
+      const childBandWidth = Math.max(MIN_NODE_SPACING * 1.6, childCount * MIN_NODE_SPACING)
+      const childBandHalf = childBandWidth / 2
+      
       placeChildren(
         renderNode,
         child.children ?? [],
         depth + 1,
-        clamp(x - childBand / 2, safeLeft * 0.5, safeRight),
-        clamp(x + childBand / 2, safeLeft, width - safeLeft * 0.5)
+        clamp(x - childBandHalf, safeLeft * 0.5, safeRight),
+        clamp(x + childBandHalf, safeLeft, width - safeLeft * 0.5)
       )
     })
   }
 
   placeChildren(renderRoot, firstLevel, 1, safeLeft, safeRight)
+  
+  // 后处理：检测并修复重叠节点（使用更大的检测半径）
+  resolveOverlaps(result, NODE_RADIUS * 2.18, width, height)
+  
   return result
+}
+
+function resolveOverlaps(nodes: RenderNode[], minDistance: number, canvasWidth: number, canvasHeight: number) {
+  // 多次迭代直到没有重叠
+  for (let iteration = 0; iteration < 15; iteration++) {
+    let hasOverlap = false
+    
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        // 跳过父子关系的节点
+        if (nodes[i].parent === nodes[j] || nodes[j].parent === nodes[i]) continue
+        const dx = nodes[j].x - nodes[i].x
+        const dy = nodes[j].y - nodes[i].y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+        
+        if (distance < minDistance && distance > 0) {
+          hasOverlap = true
+          const overlap = (minDistance - distance) / 2
+          const angle = Math.atan2(dy, dx)
+          
+          // 分开两个节点，保持在边界内
+          nodes[i].x = clamp(nodes[i].x - Math.cos(angle) * overlap, 80, canvasWidth - 80)
+          nodes[i].y = clamp(nodes[i].y - Math.sin(angle) * overlap, 120, canvasHeight - 200)
+          nodes[j].x = clamp(nodes[j].x + Math.cos(angle) * overlap, 80, canvasWidth - 80)
+          nodes[j].y = clamp(nodes[j].y + Math.sin(angle) * overlap, 120, canvasHeight - 200)
+        }
+      }
+    }
+    if (!hasOverlap) break
+  }
 }
 
 function branchPath(d: RenderNode) {
@@ -536,8 +640,24 @@ async function handleRecordingComplete(data: { base64: string; pcm: Int16Array; 
         },
       }
 
-      treeStore.addNode(parentId, candidateNode)
-      showRecorder.value = false
+      const allNodes = flattenNodeLabels(treeStore.nodes)
+      const modelSimilarNodes = (result.similar_node_ids || [])
+        .map((id: string) => allNodes.find(n => n.id === id))
+        .filter(Boolean)
+        .map((n: any) => ({ id: n.id, label: n.label }))
+      const localSimilarNodes = getLocalSimilarSiblings(parentId, candidateNode.label, candidateNode.content)
+      const uniqueSimilarNodes = [...modelSimilarNodes, ...localSimilarNodes].filter(
+        (node, index, list) => node.id !== candidateNode.id && list.findIndex((item) => item.id === node.id) === index
+      )
+
+      if (uniqueSimilarNodes.length > 0) {
+        similarNodes.value = uniqueSimilarNodes
+        pendingNode.value = { node: candidateNode, parentId }
+      } else {
+        treeStore.addNode(parentId, candidateNode)
+      }
+      // 弹窗保持打开，显示 AI 追问结果，由用户手动关闭
+      // showRecorder.value = false
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : '网络请求失败'
@@ -548,6 +668,41 @@ async function handleRecordingComplete(data: { base64: string; pcm: Int16Array; 
   } finally {
     isAnalyzing.value = false
   }
+}
+
+function confirmAddNode() {
+  if (pendingNode.value) {
+    treeStore.addNode(pendingNode.value.parentId, pendingNode.value.node)
+    pendingNode.value = null
+    similarNodes.value = []
+  }
+}
+
+function mergeWithSimilarNode(similarNodeId: string) {
+  if (pendingNode.value) {
+    // 将新节点的内容添加到相似节点的 metadata 中
+    const similarNode = findNodeById(treeStore.nodes, similarNodeId)
+    if (similarNode) {
+      // 更新相似节点的内容，合并新旧信息
+      const existingContent = similarNode.content || similarNode.label
+      const newContent = pendingNode.value.node.content || pendingNode.value.node.label
+      treeStore.updateNode(similarNodeId, {
+        content: `${existingContent}；${newContent}`,
+        metadata: {
+          ...similarNode.metadata,
+          mergedFrom: [...((similarNode.metadata?.mergedFrom as string[]) || []), pendingNode.value.node.id],
+          mergeCount: ((similarNode.metadata?.mergeCount as number) || 0) + 1,
+        },
+      })
+    }
+    pendingNode.value = null
+    similarNodes.value = []
+  }
+}
+
+function cancelPendingNode() {
+  pendingNode.value = null
+  similarNodes.value = []
 }
 
 function handleContainerClick() {
@@ -651,7 +806,37 @@ function openExportDialog() {
         <div v-if="aiResponse" class="ai-response">
           <p><strong>AI 听到：</strong>{{ aiResponse.rough_transcript }}</p>
           <p><strong>建议叶子：</strong>{{ aiResponse.leaf_text }}</p>
+          <p v-if="aiResponse.recommended_parent_label"><strong>建议位置：</strong>{{ aiResponse.recommended_parent_label }}</p>
+          <p v-if="aiResponse.classification_reason"><strong>分类依据：</strong>{{ aiResponse.classification_reason }}</p>
           <p v-if="aiResponse.follow_up_question"><strong>追问：</strong>{{ aiResponse.follow_up_question }}</p>
+        </div>
+
+        <!-- 相似节点确认对话框 -->
+        <div v-if="similarNodes.length > 0" class="similar-nodes-panel">
+          <div class="similar-nodes-header">
+            <h4>发现同层相似叶子</h4>
+            <p>这条想法可能和已有叶子意思接近，请老师决定是否仍然加入。</p>
+          </div>
+          <div class="similar-nodes-list">
+            <div
+              v-for="similar in similarNodes"
+              :key="similar.id"
+              class="similar-node-item"
+              @click="mergeWithSimilarNode(similar.id)"
+            >
+              <span class="similar-node-icon">🔄</span>
+              <span class="similar-node-label">{{ similar.label }}</span>
+              <span class="similar-node-action">合并到此</span>
+            </div>
+          </div>
+          <div class="similar-nodes-actions">
+            <button class="btn btn--outline" @click="confirmAddNode">
+              仍然添加为新节点
+            </button>
+            <button class="btn btn--ghost" @click="cancelPendingNode">
+              取消
+            </button>
+          </div>
         </div>
       </div>
 
@@ -977,6 +1162,107 @@ function openExportDialog() {
   font-size: 14px;
   font-weight: 700;
   line-height: 1.5;
+}
+
+.similar-nodes-panel {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(100, 140, 80, 0.35);
+  border-radius: 16px;
+  background: rgba(230, 242, 210, 0.85);
+}
+
+.similar-nodes-header h4 {
+  margin: 0 0 6px;
+  color: #2d3a24;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.similar-nodes-header p {
+  margin: 0 0 12px;
+  color: #4a5a3d;
+  font-size: 13px;
+}
+
+.similar-nodes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.similar-node-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.similar-node-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateX(4px);
+}
+
+.similar-node-icon {
+  font-size: 18px;
+}
+
+.similar-node-label {
+  flex: 1;
+  color: #2d3a24;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.similar-node-action {
+  color: #5a7a42;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(120, 180, 80, 0.2);
+}
+
+.similar-nodes-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn--outline {
+  background: rgba(255, 255, 255, 0.8);
+  color: #3a4a32;
+  border: 1px solid rgba(100, 140, 80, 0.4);
+}
+
+.btn--outline:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: #6a7a5d;
+}
+
+.btn--ghost:hover {
+  background: rgba(100, 140, 80, 0.1);
 }
 
 :deep(.link) {

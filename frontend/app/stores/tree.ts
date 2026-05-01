@@ -21,6 +21,7 @@ export interface TreeState {
   id: string | null
   title: string
   description: string
+  instructions: string
   nodes: TreeNode[]
   selectedNodeId: string | null
   loading: boolean
@@ -56,9 +57,10 @@ function saveToStorage(state: TreeState): void {
   try {
     const serializable = {
       id: state.id,
-      title: state.title,
-      description: state.description,
-      nodes: state.nodes,
+        title: state.title,
+        description: state.description,
+        instructions: state.instructions,
+        nodes: state.nodes,
       selectedNodeId: state.selectedNodeId,
       lastSynced: state.lastSynced,
     }
@@ -114,6 +116,7 @@ export const useTreeStore = defineStore('tree', () => {
   const id = ref<string | null>(stored?.id || null)
   const title = ref(stored?.title || 'New Thinking Tree')
   const description = ref(stored?.description || '')
+  const instructions = ref((stored as Partial<TreeState>)?.instructions || '')
   const nodes = ref<TreeNode[]>(stored?.nodes || [])
   const selectedNodeId = ref<string | null>(stored?.selectedNodeId || null)
   const loading = ref(false)
@@ -134,13 +137,14 @@ export const useTreeStore = defineStore('tree', () => {
 
   // Watch for state changes and persist
   watch(
-    [id, title, description, nodes, selectedNodeId],
+    [id, title, description, instructions, nodes, selectedNodeId],
     () => {
       isDirty.value = true
       saveToStorage({
         id: id.value,
         title: title.value,
         description: description.value,
+        instructions: instructions.value,
         nodes: nodes.value,
         selectedNodeId: selectedNodeId.value,
         loading: loading.value,
@@ -153,10 +157,11 @@ export const useTreeStore = defineStore('tree', () => {
   )
 
   // Actions
-  function setTree(tree: { id: string; title: string; description?: string; nodes: TreeNode[]; activityId?: number | null }) {
+  function setTree(tree: { id: string; title: string; description?: string; instructions?: string; nodes: TreeNode[]; activityId?: number | null }) {
     id.value = tree.id
     title.value = tree.title
     description.value = tree.description || ''
+    instructions.value = tree.instructions || ''
     nodes.value = tree.nodes
     activityId.value = tree.activityId ?? null
     isDirty.value = false
@@ -212,12 +217,25 @@ export const useTreeStore = defineStore('tree', () => {
     activityId.value = id
   }
 
+  function setActivityContext(context: {
+    activityId?: number | null
+    title?: string
+    description?: string | null
+    instructions?: string | null
+  }) {
+    if (context.activityId !== undefined) activityId.value = context.activityId
+    if (context.title !== undefined) title.value = context.title
+    if (context.description !== undefined) description.value = context.description || ''
+    if (context.instructions !== undefined) instructions.value = context.instructions || ''
+  }
+
   function reset() {
     // Create backup before reset
     createBackup({
       id: id.value,
       title: title.value,
       description: description.value,
+      instructions: instructions.value,
       nodes: nodes.value,
       selectedNodeId: selectedNodeId.value,
       loading: loading.value,
@@ -229,6 +247,7 @@ export const useTreeStore = defineStore('tree', () => {
     id.value = null
     title.value = 'New Thinking Tree'
     description.value = ''
+    instructions.value = ''
     nodes.value = []
     selectedNodeId.value = null
     loading.value = false
@@ -254,6 +273,7 @@ export const useTreeStore = defineStore('tree', () => {
       id: id.value,
       title: title.value,
       description: description.value,
+      instructions: instructions.value,
       nodes: nodes.value,
       selectedNodeId: selectedNodeId.value,
       loading: loading.value,
@@ -268,6 +288,7 @@ export const useTreeStore = defineStore('tree', () => {
     id.value = state.id
     title.value = state.title
     description.value = state.description
+    instructions.value = state.instructions || ''
     nodes.value = state.nodes
     selectedNodeId.value = state.selectedNodeId
     activityId.value = state.activityId
@@ -279,6 +300,7 @@ export const useTreeStore = defineStore('tree', () => {
     id,
     title,
     description,
+    instructions,
     nodes,
     selectedNodeId,
     loading,
@@ -303,6 +325,7 @@ export const useTreeStore = defineStore('tree', () => {
     setError,
     markSynced,
     setActivityId,
+    setActivityContext,
     reset,
     restoreBackup,
     exportState,

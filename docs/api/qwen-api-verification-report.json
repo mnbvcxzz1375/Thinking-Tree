@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-04-30T23:48:42.044775",
+  "timestamp": "2026-05-01T11:47:39.213092",
   "model": "qwen3.5-omni-flash-realtime",
   "region": "cn",
   "ws_url": "wss://dashscope.aliyuncs.com/api-ws/v1/realtime?model=qwen3.5-omni-flash-realtime",
@@ -15,7 +15,7 @@
     {
       "name": "session_created",
       "status": "PASS",
-      "session_id": "sess_CIMsb5LD4W8xZm8JUMbrb"
+      "session_id": "sess_GKBZdFhuFJGY4HJKtLDzj"
     },
     {
       "name": "session_update",
@@ -31,11 +31,11 @@
       "name": "audio_response",
       "status": "FAIL",
       "error": {
-        "event_id": "event_EdEyhJno5gTey1QWFveCU",
+        "event_id": "event_TQvtlkzLs5muPvzXzSHjw",
         "type": "error",
         "error": {
           "code": "COMMON_ERROR",
-          "message": "<400> InternalError.Algo.InvalidParameter: Voice 'Chelsie' is not supported."
+          "message": "<400> InternalError.Algo.InvalidParameter: Voice 'Cherry' is not supported."
         }
       }
     },

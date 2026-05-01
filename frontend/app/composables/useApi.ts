@@ -38,6 +38,7 @@ const cache = new Map<string, { data: unknown; expiry: number }>()
 export function useApi() {
   const config = useRuntimeConfig()
   const baseURL = config.public.apiBase as string
+  const sameOriginBaseURL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
 
   /**
    * Set authentication token
@@ -82,7 +83,8 @@ export function useApi() {
    * Build URL with query parameters
    */
   function buildUrl(path: string, params?: Record<string, string | number | boolean>): string {
-    const url = new URL(path, baseURL)
+    const effectiveBaseURL = baseURL || sameOriginBaseURL
+    const url = new URL(path, effectiveBaseURL)
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {

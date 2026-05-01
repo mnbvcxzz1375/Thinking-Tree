@@ -57,23 +57,49 @@ def _compact_tree_context(activity_context: dict | None) -> str:
 
     theme = activity_context.get("theme") or "未命名主题"
     description = activity_context.get("description") or ""
+    instructions = activity_context.get("instructions") or ""
     total_nodes = activity_context.get("total_nodes", 0)
     directions = activity_context.get("directions") or []
 
     lines = [
         f"主题：{theme}",
         f"说明：{description}" if description else "",
+        f"活动指导：{instructions}" if instructions else "",
         f"当前节点数：{total_nodes}",
-        "一级方向与已有叶子：",
+        "完整树结构（id: label [类型]）：",
     ]
 
+    # 限制最大节点数避免 prompt 过长
+    max_nodes = 50
+    node_count = 0
+
+    def format_node(node: dict, depth: int = 0) -> None:
+        nonlocal node_count
+        if node_count >= max_nodes:
+            if depth <= 1:
+                lines.append(f"{'  ' * depth}... 省略其余节点")
+            return
+        
+        node_count += 1
+        node_id = node.get("id")
+        label = node.get("label") or node.get("content") or node_id
+        node_type = node.get("nodeType", "")
+        
+        # 添加类型标签帮助 AI 理解节点层级
+        type_tag = ""
+        if node_type == "direction":
+            type_tag = " [方向]"
+        elif node_type in ("answer", "insight"):
+            type_tag = " [叶子]"
+        
+        indent = "  " * depth
+        lines.append(f"{indent}- {node_id}: {label}{type_tag}")
+        
+        for child in node.get("children") or []:
+            format_node(child, depth + 1)
+
     for direction in directions:
-        direction_id = direction.get("id")
-        label = direction.get("label") or direction_id
-        children = direction.get("children") or []
-        child_labels = [child.get("label") or child.get("content") for child in children]
-        child_text = "、".join([text for text in child_labels if text]) or "暂无"
-        lines.append(f"- {label}（id: {direction_id}）：{child_text}")
+        format_node(direction, 0)
 
     return "\n".join([line for line in lines if line])
 
@@ -123,6 +149,7 @@ def _parse_analysis_json(content: str) -> dict:
         "confidence": str(parsed.get("confidence") or "medium").strip(),
         "recommended_parent_id": parsed.get("recommended_parent_id"),
         "recommended_parent_label": parsed.get("recommended_parent_label"),
+        "similar_node_ids": parsed.get("similar_node_ids") or [],
         "classification_reason": parsed.get("classification_reason"),
     }
 
@@ -148,15 +175,15 @@ async def _analyze_with_qwen_realtime(audio_base64: str, prompt: str, api_key: s
     input_transcript_parts: list[str] = []
 
     try:
-        async with websockets.connect(url, additional_headers=headers, ping_interval=30, ping_timeout=10) as ws:
+        async with websockets.connect(url, additional_headers=headers, ping_interval=30, ping_timeout=30) as ws:
             await ws.send(json.dumps({
                 "type": "session.update",
                 "session": {
-                    "modalities": ["text", "audio"],
-                    "voice": "Tina",
-                    "instructions": instructions,
+                    "modalities": ["text"],
                     "input_audio_format": "pcm",
                     "output_audio_format": "pcm",
+                    "turn_detection": None,
+                    "instructions": instructions,
                 }
             }))
 
@@ -188,6 +215,7 @@ async def _analyze_with_qwen_realtime(audio_base64: str, prompt: str, api_key: s
             while True:
                 event = json.loads(await asyncio.wait_for(ws.recv(), timeout=settings.ai_timeout_seconds))
                 event_type = event.get("type")
+                logger.info("DashScope event: %s", event_type)
                 if event_type == "response.text.delta":
                     assistant_text_parts.append(event.get("delta", ""))
                 elif event_type == "response.audio_transcript.delta":
@@ -423,25 +451,32 @@ async def analyze_speech_rest(request: SpeechAnalyzeRequest):
             "Content-Type": "application/json"
         }
         
-        prompt = f"""你是儿童课堂活动中的思维整理助手。你必须先理解录音，再结合当前思维树进度，把孩子的新想法放到最合适的一级方向下面。
+        prompt = f"""你是儿童课堂活动中的思维整理助手。
 
 当前思维树进度：
 {tree_context}
 
-任务：
-1. 转写孩子录音里的主要表达，不要编造。
-2. 生成一个适合显示在树叶上的短句，6-12个中文字符。
-3. 从当前一级方向中选择最适合挂载的位置，返回它的 id 和名称；如果没有合适方向，才返回 root。
-4. 给教师一个自然的继续追问问题。
+节点类型说明：[方向]是主分支，[叶子]是具体想法。recommended_parent_id 可以是任意层级节点的 id，不限于一级方向。
 
-只返回 JSON，不要 Markdown，不要解释：
+任务：
+1. 转写孩子录音里的主要表达。
+2. 生成叶子文本（6-12字）。
+3. 选择最合适的挂载位置：
+   - 先看所有层级的[叶子]，如果新想法是某个叶子概念的细分或例子，必须挂到那个叶子下面。例如已有“很小”，新录音“叶子很小/树干很小”应挂到“很小”下面。
+   - 如果新想法与某个[叶子]节点含义几乎相同或高度相似，recommended_parent_id 返回那个相似节点的父节点，并在 similar_node_ids 中列出相似节点，由老师决定是否仍然加入。
+   - 只有找不到合适叶子时，才挂到最相关的[方向]节点下。
+4. 只检查 recommended_parent_id 对应父节点下的同层节点是否相似，不要跨层乱报。
+5. 给教师一个追问问题。
+
+只返回 JSON：
 {{
   "rough_transcript": "转写内容",
   "leaf_text": "叶子文本",
-  "recommended_parent_id": "一级方向id或root",
-  "recommended_parent_label": "一级方向名称或主题",
-  "classification_reason": "一句话说明为什么放这里",
-  "follow_up_question": "追问问题",
+  "recommended_parent_id": "最匹配节点的id",
+  "recommended_parent_label": "节点名称",
+  "similar_node_ids": ["相似节点id"],
+  "classification_reason": "选择原因",
+  "follow_up_question": "追问",
   "confidence": "high/medium/low"
 }}"""
 

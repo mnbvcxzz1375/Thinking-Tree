@@ -66,14 +66,26 @@
 
 <script setup lang="ts">
 import { useActivityStore } from '~/stores/activity'
+import { useTreeStore } from '~/stores/tree'
 
 const route = useRoute()
 const router = useRouter()
 const store = useActivityStore()
+const treeStore = useTreeStore()
 
 const activityId = computed(() => Number(route.params.id))
 
 const activity = computed(() => store.currentActivity)
+
+watch(activity, (current) => {
+  if (!current) return
+  treeStore.setActivityContext({
+    activityId: current.id,
+    title: current.title,
+    description: current.description,
+    instructions: current.instructions,
+  })
+}, { immediate: true })
 
 const difficultyLabels: Record<string, string> = {
   easy: '简单',

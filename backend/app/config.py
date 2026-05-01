@@ -45,7 +45,7 @@ class Settings(BaseSettings):
 
     # AI Provider Selection
     ai_provider: str = "qwen"  # "qwen" or "mimo"
-    ai_timeout_seconds: int = 30
+    ai_timeout_seconds: int = 60
     ai_max_retries: int = 3
     ai_retry_delay_ms: int = 1000
 
