@@ -80,6 +80,13 @@ class ActivityService:
                 detail=f"Invalid difficulty_level. Must be one of: {valid_levels}",
             )
 
+        if activity_data.activity_mode == "debate":
+            if not activity_data.debate_pro_label or not activity_data.debate_con_label:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Debate mode requires both debate_pro_label and debate_con_label",
+                )
+
         # Validate title is not empty
         if not activity_data.title or not activity_data.title.strip():
             raise HTTPException(
@@ -133,6 +140,15 @@ class ActivityService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid difficulty_level. Must be one of: {valid_levels}",
                 )
+
+        next_mode = update_data.get("activity_mode", db_activity.activity_mode)
+        next_pro_label = update_data.get("debate_pro_label", db_activity.debate_pro_label)
+        next_con_label = update_data.get("debate_con_label", db_activity.debate_con_label)
+        if next_mode == "debate" and (not next_pro_label or not next_con_label):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debate mode requires both debate_pro_label and debate_con_label",
+            )
 
         # Validate title if provided
         if "title" in update_data:

@@ -26,6 +26,9 @@
             <span v-if="activity.age_group" class="badge badge--outline">
               {{ activity.age_group }}
             </span>
+            <span class="badge badge--mode">
+              {{ activity.activity_mode === 'debate' ? '辩论模式' : '普通思维树' }}
+            </span>
             <span v-if="!activity.is_active" class="badge badge--inactive">已停用</span>
           </div>
         </div>
@@ -46,6 +49,16 @@
         <div v-if="activity.instructions" class="detail-section">
           <h3>活动指导</h3>
           <p class="pre-wrap">{{ activity.instructions }}</p>
+        </div>
+
+        <div v-if="activity.activity_mode === 'debate'" class="detail-section">
+          <h3>辩论设置</h3>
+          <dl class="detail-meta">
+            <dt>正方</dt>
+            <dd>{{ activity.debate_pro_label }}</dd>
+            <dt>反方</dt>
+            <dd>{{ activity.debate_con_label }}</dd>
+          </dl>
         </div>
 
         <div class="detail-section">
@@ -84,6 +97,9 @@ watch(activity, (current) => {
     title: current.title,
     description: current.description,
     instructions: current.instructions,
+    activityMode: current.activity_mode,
+    debateProLabel: current.debate_pro_label,
+    debateConLabel: current.debate_con_label,
   })
 }, { immediate: true })
 
@@ -227,6 +243,10 @@ watch(activityId, (newId) => {
 .badge--inactive {
   background: #fee2e2;
   color: #991b1b;
+}
+.badge--mode {
+  background: #edf6d0;
+  color: #314325;
 }
 .detail-header__actions {
   display: flex;

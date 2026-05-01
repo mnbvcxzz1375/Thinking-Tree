@@ -6,6 +6,9 @@ export interface Activity {
   title: string
   description: string | null
   instructions: string | null
+  activity_mode: 'normal' | 'debate'
+  debate_pro_label: string | null
+  debate_con_label: string | null
   difficulty_level: 'easy' | 'medium' | 'hard'
   age_group: string | null
   is_active: boolean
@@ -17,6 +20,9 @@ export interface ActivityCreateInput {
   title: string
   description?: string
   instructions?: string
+  activity_mode?: 'normal' | 'debate'
+  debate_pro_label?: string
+  debate_con_label?: string
   difficulty_level?: 'easy' | 'medium' | 'hard'
   age_group?: string
   is_active?: boolean
@@ -26,6 +32,9 @@ export interface ActivityUpdateInput {
   title?: string
   description?: string
   instructions?: string
+  activity_mode?: 'normal' | 'debate'
+  debate_pro_label?: string
+  debate_con_label?: string
   difficulty_level?: 'easy' | 'medium' | 'hard'
   age_group?: string
   is_active?: boolean

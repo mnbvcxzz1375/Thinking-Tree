@@ -1,5 +1,6 @@
 """Database configuration and session management with connection pooling."""
 from sqlalchemy import create_engine, Engine
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import sessionmaker, Session, declarative_base
 from sqlalchemy.pool import QueuePool
 from typing import Generator, Optional
@@ -56,6 +57,26 @@ def init_db() -> None:
     """Initialize database tables."""
     engine = get_engine()
     Base.metadata.create_all(bind=engine)
+    ensure_activity_schema(engine)
+
+
+def ensure_activity_schema(engine: Engine) -> None:
+    """Add activity columns introduced after the initial local schema."""
+    inspector = inspect(engine)
+    if "activities" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("activities")}
+    column_sql = {
+        "activity_mode": "ALTER TABLE activities ADD COLUMN activity_mode VARCHAR(20) NOT NULL DEFAULT 'normal'",
+        "debate_pro_label": "ALTER TABLE activities ADD COLUMN debate_pro_label VARCHAR(255)",
+        "debate_con_label": "ALTER TABLE activities ADD COLUMN debate_con_label VARCHAR(255)",
+    }
+
+    with engine.begin() as conn:
+        for column, sql in column_sql.items():
+            if column not in existing:
+                conn.execute(text(sql))
 
 
 def drop_db() -> None:

@@ -16,6 +16,8 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+QWEN_AUDIO_CHUNK_CHARS = 64_000
+
 
 class SpeechAnalyzeRequest(BaseModel):
     """Request body for non-streaming speech analysis."""
@@ -48,6 +50,25 @@ def _pcm16_base64_to_wav_data_url(audio_base64: str, sample_rate: int, channels:
 
     wav_base64 = base64.b64encode(wav_buffer.getvalue()).decode("ascii")
     return f"data:audio/wav;base64,{wav_base64}"
+
+
+def _normalize_audio_base64(audio_base64: str) -> str:
+    return audio_base64.split(",", 1)[1] if "," in audio_base64 else audio_base64
+
+
+def _iter_base64_chunks(audio_base64: str, chunk_chars: int = QWEN_AUDIO_CHUNK_CHARS):
+    chunk_chars = max(4, chunk_chars - (chunk_chars % 4))
+    for start in range(0, len(audio_base64), chunk_chars):
+        yield audio_base64[start:start + chunk_chars]
+
+
+async def _send_audio_append_chunks(ws, audio_base64: str) -> None:
+    raw_audio = _normalize_audio_base64(audio_base64)
+    for chunk in _iter_base64_chunks(raw_audio):
+        await ws.send(json.dumps({
+            "type": "input_audio_buffer.append",
+            "audio": chunk,
+        }))
 
 
 def _compact_tree_context(activity_context: dict | None) -> str:
@@ -84,6 +105,7 @@ def _compact_tree_context(activity_context: dict | None) -> str:
         node_id = node.get("id")
         label = node.get("label") or node.get("content") or node_id
         node_type = node.get("nodeType", "")
+        metadata = node.get("metadata") or {}
         
         # 添加类型标签帮助 AI 理解节点层级
         type_tag = ""
@@ -91,6 +113,13 @@ def _compact_tree_context(activity_context: dict | None) -> str:
             type_tag = " [方向]"
         elif node_type in ("answer", "insight"):
             type_tag = " [叶子]"
+        if metadata.get("debateLabel"):
+            stance_label = metadata.get("debateStanceLabel")
+            type_tag += f" [{metadata.get('debateLabel')}: {stance_label}]" if stance_label else f" [{metadata.get('debateLabel')}]"
+        elif metadata.get("debateRole") == "pro":
+            type_tag += " [正方]"
+        elif metadata.get("debateRole") == "con":
+            type_tag += " [反方]"
         
         indent = "  " * depth
         lines.append(f"{indent}- {node_id}: {label}{type_tag}")
@@ -199,10 +228,7 @@ async def _analyze_with_qwen_realtime(audio_base64: str, prompt: str, api_key: s
                         detail=f"Realtime 会话配置失败：{error.get('code') or 'error'}，{error.get('message') or event}",
                     )
 
-            await ws.send(json.dumps({
-                "type": "input_audio_buffer.append",
-                "audio": audio_base64.split(",", 1)[1] if "," in audio_base64 else audio_base64,
-            }))
+            await _send_audio_append_chunks(ws, audio_base64)
             await ws.send(json.dumps({"type": "input_audio_buffer.commit"}))
             await ws.send(json.dumps({
                 "type": "response.create",
@@ -346,8 +372,7 @@ async def audio_websocket_proxy(websocket: WebSocket):
                     message = json.loads(data)
                     
                     if message.get("type") == "input_audio_buffer.append":
-                        # Forward audio chunk to Qwen
-                        await qwen_ws.send(json.dumps(message))
+                        await _send_audio_append_chunks(qwen_ws, message.get("audio") or "")
                     elif message.get("type") == "input_audio_buffer.commit":
                         # Commit audio and request response
                         await qwen_ws.send(json.dumps(message))
@@ -457,6 +482,7 @@ async def analyze_speech_rest(request: SpeechAnalyzeRequest):
 {tree_context}
 
 节点类型说明：[方向]是主分支，[叶子]是具体想法。recommended_parent_id 可以是任意层级节点的 id，不限于一级方向。
+如果树结构里出现[正方]、[反方]，这是辩论模式：先判断孩子表达支持哪一方，再在该方下面选择最合适的方向或叶子；不要把正方理由挂到反方下面，也不要把反方理由挂到正方下面。
 
 任务：
 1. 转写孩子录音里的主要表达。

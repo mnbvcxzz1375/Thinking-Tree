@@ -17,6 +17,14 @@ type RenderNode = {
   parent: RenderNode | null
 }
 
+type SetupDirection = {
+  id: string
+  name: string
+  emoji: string
+  children?: SetupDirection[]
+  metadata?: Record<string, unknown>
+}
+
 const treeStore = useTreeStore()
 const treeContainer = ref<HTMLElement | null>(null)
 const perfMetrics = ref('Render Time: 0 ms')
@@ -38,6 +46,35 @@ let gContainer: d3.Selection<SVGGElement, unknown, null, undefined>
 let currentZoom: d3.ZoomBehavior<SVGSVGElement, unknown>
 let resizeTimeout: number | undefined
 
+function normalizeDebateTreeShape(nodes: TreeNode[]) {
+  const root = nodes[0]
+  if (!root || root.metadata?.treeMode !== 'debate') return nodes
+
+  const children = root.children || []
+  const hasOldStanceLayer = children.some((node) => node.metadata?.debateLevel === 'stance')
+  if (!hasOldStanceLayer) return nodes
+
+  root.children = children.flatMap((node) => {
+    if (node.metadata?.debateLevel !== 'stance') return [node]
+
+    const role = node.metadata?.debateRole
+    const label = node.metadata?.debateLabel
+    return (node.children || []).map((child) => ({
+      ...child,
+      parentId: root.id,
+      metadata: {
+        ...(child.metadata || {}),
+        debateRole: role,
+        debateLevel: 'direction',
+        debateLabel: label,
+        debateStanceLabel: node.label,
+      },
+    }))
+  })
+
+  return nodes
+}
+
 function restorePersistedTree() {
   if (typeof window === 'undefined' || treeStore.nodes.length > 0) return false
 
@@ -50,6 +87,9 @@ function restorePersistedTree() {
       title: string
       description: string
       instructions: string
+      activityMode: 'normal' | 'debate'
+      debateProLabel: string
+      debateConLabel: string
       nodes: TreeNode[]
       selectedNodeId: string | null
       lastSynced: string | null
@@ -61,7 +101,10 @@ function restorePersistedTree() {
     treeStore.title = parsed.title || parsed.nodes[0]?.label || '思维树'
     treeStore.description = parsed.description || ''
     treeStore.instructions = parsed.instructions || ''
-    treeStore.nodes = parsed.nodes
+    treeStore.activityMode = parsed.activityMode || 'normal'
+    treeStore.debateProLabel = parsed.debateProLabel || '放走蚂蚁'
+    treeStore.debateConLabel = parsed.debateConLabel || '踩扁蚂蚁'
+    treeStore.nodes = normalizeDebateTreeShape(parsed.nodes)
     treeStore.selectedNodeId = parsed.selectedNodeId ?? null
     treeStore.lastSynced = parsed.lastSynced ?? null
     return true
@@ -71,25 +114,47 @@ function restorePersistedTree() {
   }
 }
 
-function initializeTree(data: { theme: string; directions: { id: string; name: string; emoji: string }[] }) {
+function createTreeNodeFromDirection(direction: SetupDirection, parentId: string): TreeNode {
+  const node: TreeNode = {
+    id: direction.id,
+    label: direction.name,
+    content: direction.name,
+    nodeType: 'direction',
+    parentId,
+    children: [],
+    metadata: {
+      emoji: direction.emoji,
+      ...direction.metadata,
+    },
+  }
+  node.children = (direction.children || []).map((child) => createTreeNodeFromDirection(child, node.id))
+  return node
+}
+
+function initializeTree(data: {
+  theme: string
+  mode?: 'normal' | 'debate'
+  proLabel?: string
+  conLabel?: string
+  directions: SetupDirection[]
+}) {
   const rootNode: TreeNode = {
     id: 'root',
     label: data.theme,
     content: data.theme,
     nodeType: 'root',
     parentId: null,
-    children: data.directions.map((dir) => ({
-      id: dir.id,
-      label: dir.name,
-      content: dir.name,
-      nodeType: 'direction',
-      parentId: 'root',
-      children: [],
-    })),
+    children: data.directions.map((dir) => createTreeNodeFromDirection(dir, 'root')),
+    metadata: {
+      treeMode: data.mode || 'normal',
+    },
   }
 
   treeStore.nodes = [rootNode]
   treeStore.title = data.theme
+  treeStore.activityMode = data.mode || 'normal'
+  if (data.proLabel) treeStore.debateProLabel = data.proLabel
+  if (data.conLabel) treeStore.debateConLabel = data.conLabel
   showSetup.value = false
   nextTick(() => renderTree(treeStore.nodes))
 }
@@ -106,12 +171,13 @@ function flattenNodeLabels(nodes: TreeNode[]): { id: string; label: string; cont
   ])
 }
 
-function buildTreeNode(node: TreeNode): { id: string; label: string; content: string; nodeType: string; children: any[] } {
+function buildTreeNode(node: TreeNode): { id: string; label: string; content: string; nodeType: string; metadata: Record<string, unknown>; children: any[] } {
   return {
     id: node.id,
     label: node.label,
     content: node.content,
     nodeType: node.nodeType,
+    metadata: node.metadata || {},
     children: (node.children || []).map(child => buildTreeNode(child)),
   }
 }
@@ -184,6 +250,49 @@ function getLocalSimilarSiblings(parentId: string, label: string, content: strin
     .map((node) => ({ id: node.id, label: node.label }))
 }
 
+function debateRoleOf(node: TreeNode): 'pro' | 'con' | null {
+  const role = node.metadata?.debateRole
+  return role === 'pro' || role === 'con' ? role : null
+}
+
+function debateRoleForRender(node: RenderNode): 'pro' | 'con' | null {
+  return debateRoleOf(node.data) || (node.parent ? debateRoleForRender(node.parent) : null)
+}
+
+function isDebateTree(rootData: TreeNode) {
+  return rootData.metadata?.treeMode === 'debate'
+    || (rootData.children || []).some((child) => debateRoleOf(child))
+}
+
+function debateStanceText(rootData: TreeNode, role: 'pro' | 'con') {
+  const node = (rootData.children || []).find((child) => debateRoleOf(child) === role)
+  return String(node?.metadata?.debateStanceLabel || (role === 'pro' ? '正方' : '反方'))
+}
+
+function inheritedDebateMetadata(parentId: string) {
+  const parent = findNodeById(treeStore.nodes, parentId)
+  if (!parent) return {}
+  const metadata = parent.metadata || {}
+  const role = metadata.debateRole
+  if (role !== 'pro' && role !== 'con') return {}
+  return {
+    debateRole: role,
+    debateLevel: 'leaf',
+    debateLabel: metadata.debateLabel,
+    debateStanceLabel: metadata.debateStanceLabel,
+  }
+}
+
+function debateDirectionMetadata(role: 'pro' | 'con') {
+  const root = treeStore.nodes[0]
+  return {
+    debateRole: role,
+    debateLevel: 'direction',
+    debateLabel: role === 'pro' ? '正方' : '反方',
+    debateStanceLabel: root ? debateStanceText(root, role) : undefined,
+  }
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
@@ -206,17 +315,52 @@ function buildRenderNodes(rootData: TreeNode, width: number, height: number): Re
   const MIN_NODE_SPACING = 130
   const NODE_RADIUS = 55
 
+  function placeNestedChildren(parent: RenderNode, children: TreeNode[], depth: number, bandLeft: number, bandRight: number) {
+    if (!children.length) return
+
+    const columns = Math.min(children.length, 3)
+    const rows = Math.ceil(children.length / columns)
+    const spacing = Math.max(124, NODE_RADIUS * 2.15)
+    const rowGap = Math.max(116, NODE_RADIUS * 2.05)
+    const baseY = parent.y - Math.max(126, height * 0.12)
+
+    children.forEach((child, index) => {
+      const row = Math.floor(index / columns)
+      const col = index % columns
+      const itemsInRow = row === rows - 1 ? children.length - row * columns : columns
+      const rowWidth = (itemsInRow - 1) * spacing
+      const x = clamp(parent.x - rowWidth / 2 + col * spacing, bandLeft + 70, bandRight - 70)
+      const y = clamp(baseY - row * rowGap + Math.sin(index + depth) * 6, 112, height - 190)
+      const renderNode: RenderNode = { data: child, depth, x, y, parent }
+      result.push(renderNode)
+
+      const childCount = Math.max(1, child.children?.length ?? 0)
+      const childBandHalf = Math.max(MIN_NODE_SPACING * 1.15, childCount * MIN_NODE_SPACING * 0.6)
+      placeNestedChildren(
+        renderNode,
+        child.children ?? [],
+        depth + 1,
+        clamp(x - childBandHalf, bandLeft, bandRight),
+        clamp(x + childBandHalf, bandLeft, bandRight)
+      )
+    })
+  }
+
   function placeChildren(parent: RenderNode, children: TreeNode[], depth: number, bandLeft: number, bandRight: number) {
     if (!children.length) return
 
     const yStep = Math.max(108, Math.min(150, height * 0.15))
     const baseY = directionY - (depth - 1) * yStep
     const available = Math.max(150, bandRight - bandLeft)
-    const maxColumns = Math.max(1, Math.floor(available / MIN_NODE_SPACING))
+    const maxColumns = depth === 1 ? children.length : Math.max(1, Math.floor(available / MIN_NODE_SPACING))
     const columns = Math.min(children.length, Math.max(1, maxColumns))
     const rows = Math.ceil(children.length / columns)
     const rowGap = Math.max(92, NODE_RADIUS * 1.85)
-    const actualSpacing = columns === 1 ? 0 : Math.max(MIN_NODE_SPACING, available / Math.max(columns - 1, 1))
+    const actualSpacing = columns === 1
+      ? 0
+      : depth === 1
+        ? Math.max(104, available / Math.max(columns - 1, 1))
+        : Math.max(MIN_NODE_SPACING, available / Math.max(columns - 1, 1))
 
     children.forEach((child, index) => {
       const row = Math.floor(index / columns)
@@ -236,7 +380,7 @@ function buildRenderNodes(rootData: TreeNode, width: number, height: number): Re
       const childBandWidth = Math.max(MIN_NODE_SPACING * 1.6, childCount * MIN_NODE_SPACING)
       const childBandHalf = childBandWidth / 2
       
-      placeChildren(
+      placeNestedChildren(
         renderNode,
         child.children ?? [],
         depth + 1,
@@ -246,12 +390,54 @@ function buildRenderNodes(rootData: TreeNode, width: number, height: number): Re
     })
   }
 
-  placeChildren(renderRoot, firstLevel, 1, safeLeft, safeRight)
+  if (isDebateTree(rootData)) {
+    const centerGap = Math.max(150, width * 0.12)
+    const proNodes = firstLevel.filter((node) => debateRoleOf(node) === 'pro')
+    const conNodes = firstLevel.filter((node) => debateRoleOf(node) === 'con')
+    const neutralNodes = firstLevel.filter((node) => !debateRoleOf(node))
+
+    placeChildren(renderRoot, proNodes, 1, safeLeft, rootX - centerGap / 2)
+    placeChildren(renderRoot, conNodes, 1, rootX + centerGap / 2, safeRight)
+    if (neutralNodes.length) {
+      placeChildren(renderRoot, neutralNodes, 1, rootX - centerGap * 0.25, rootX + centerGap * 0.25)
+    }
+  } else {
+    placeChildren(renderRoot, firstLevel, 1, safeLeft, safeRight)
+  }
   
   // 后处理：检测并修复重叠节点（使用更大的检测半径）
-  resolveOverlaps(result, NODE_RADIUS * 2.18, width, height)
+  resolveNestedOverlaps(result, NODE_RADIUS * 2.18, width, height)
   
   return result
+}
+
+function resolveNestedOverlaps(nodes: RenderNode[], minDistance: number, canvasWidth: number, canvasHeight: number) {
+  for (let iteration = 0; iteration < 15; iteration++) {
+    let hasOverlap = false
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        if (nodes[i].depth <= 1 || nodes[j].depth <= 1) continue
+        if (nodes[i].parent === nodes[j] || nodes[j].parent === nodes[i]) continue
+
+        const dx = nodes[j].x - nodes[i].x
+        const dy = nodes[j].y - nodes[i].y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+
+        if (distance < minDistance && distance > 0) {
+          hasOverlap = true
+          const overlap = (minDistance - distance) / 2
+          const angle = Math.atan2(dy, dx)
+
+          nodes[i].x = clamp(nodes[i].x - Math.cos(angle) * overlap, 80, canvasWidth - 80)
+          nodes[i].y = clamp(nodes[i].y - Math.sin(angle) * overlap, 120, canvasHeight - 200)
+          nodes[j].x = clamp(nodes[j].x + Math.cos(angle) * overlap, 80, canvasWidth - 80)
+          nodes[j].y = clamp(nodes[j].y + Math.sin(angle) * overlap, 120, canvasHeight - 200)
+        }
+      }
+    }
+    if (!hasOverlap) break
+  }
 }
 
 function resolveOverlaps(nodes: RenderNode[], minDistance: number, canvasWidth: number, canvasHeight: number) {
@@ -286,8 +472,13 @@ function resolveOverlaps(nodes: RenderNode[], minDistance: number, canvasWidth: 
 
 function branchPath(d: RenderNode) {
   if (!d.parent) return ''
+  const role = debateRoleOf(d.data)
   const source = d.parent.depth === 0
-    ? { ...d.parent, y: d.parent.y - 92 }
+    ? {
+        ...d.parent,
+        x: role === 'pro' ? d.parent.x - 72 : role === 'con' ? d.parent.x + 72 : d.parent.x,
+        y: d.parent.y - 132,
+      }
     : d.parent
   const dy = source.y - d.y
   const bend = Math.max(36, Math.abs(d.x - source.x) * 0.18)
@@ -317,7 +508,13 @@ function drawNodeShape(selection: d3.Selection<d3.BaseType, RenderNode, SVGGElem
     .attr('cx', (d) => d.x)
     .attr('cy', (d) => d.y)
     .attr('r', (d) => d.r)
-    .attr('fill', 'url(#direction-gradient)')
+    .attr('fill', function () {
+      const node = d3.select(this.parentNode as SVGGElement).datum() as RenderNode
+      const role = debateRoleForRender(node)
+      if (role === 'pro') return 'url(#debate-pro-gradient)'
+      if (role === 'con') return 'url(#debate-con-gradient)'
+      return 'url(#direction-gradient)'
+    })
     .attr('opacity', (d) => d.opacity)
     .attr('filter', 'url(#soft-shadow)')
 
@@ -326,6 +523,16 @@ function drawNodeShape(selection: d3.Selection<d3.BaseType, RenderNode, SVGGElem
     .attr('class', 'leaf-path')
     .attr('d', (d) => {
       if (d.data.nodeType === 'root') {
+        if (isDebateTree(d.data)) {
+          return `M -72 66
+            C -94 -8 -104 -108 -72 -154
+            C -44 -112 -28 -42 -12 66
+            C -30 88 -54 90 -72 66 Z
+            M 12 66
+            C 28 -42 44 -112 72 -154
+            C 104 -108 94 -8 72 66
+            C 54 90 30 88 12 66 Z`
+        }
         return 'M -46 58 C -30 -16 -18 -95 0 -122 C 18 -95 30 -16 46 58 C 24 74 -24 74 -46 58 Z'
       }
       if (d.data.nodeType === 'direction') {
@@ -335,6 +542,8 @@ function drawNodeShape(selection: d3.Selection<d3.BaseType, RenderNode, SVGGElem
     })
     .attr('fill', (d) => {
       if (d.data.nodeType === 'root') return 'url(#trunk-gradient)'
+      if (debateRoleForRender(d) === 'pro') return 'url(#debate-pro-gradient)'
+      if (debateRoleForRender(d) === 'con') return 'url(#debate-con-gradient)'
       if (d.data.nodeType === 'direction') return 'url(#direction-gradient)'
       if (d.data.nodeType === 'insight') return '#9fc95f'
       return '#d5c06a'
@@ -388,6 +597,14 @@ function renderTree(nodes: TreeNode[]) {
   directionGradient.append('stop').attr('offset', '0%').attr('stop-color', '#c9d979')
   directionGradient.append('stop').attr('offset', '100%').attr('stop-color', '#7faa4e')
 
+  const debateProGradient = defs.append('linearGradient').attr('id', 'debate-pro-gradient').attr('x1', '0%').attr('y1', '0%').attr('x2', '100%').attr('y2', '100%')
+  debateProGradient.append('stop').attr('offset', '0%').attr('stop-color', '#dff08a')
+  debateProGradient.append('stop').attr('offset', '100%').attr('stop-color', '#76b85a')
+
+  const debateConGradient = defs.append('linearGradient').attr('id', 'debate-con-gradient').attr('x1', '0%').attr('y1', '0%').attr('x2', '100%').attr('y2', '100%')
+  debateConGradient.append('stop').attr('offset', '0%').attr('stop-color', '#f1d27d')
+  debateConGradient.append('stop').attr('offset', '100%').attr('stop-color', '#d6875b')
+
   const trunkGradient = defs.append('linearGradient').attr('id', 'trunk-gradient').attr('x1', '0%').attr('y1', '0%').attr('x2', '100%').attr('y2', '0%')
   trunkGradient.append('stop').attr('offset', '0%').attr('stop-color', '#6b4b35')
   trunkGradient.append('stop').attr('offset', '50%').attr('stop-color', '#493424')
@@ -436,19 +653,60 @@ function renderTree(nodes: TreeNode[]) {
         .attr('stroke-width', 2)
     })
 
-    gContainer
-      .append('path')
-      .attr('class', 'main-trunk')
-      .attr(
-        'd',
-        `M ${rootRender.x - 34} ${rootRender.y + 42}
-        C ${rootRender.x - 18} ${rootRender.y - 20}, ${rootRender.x - 18} ${rootRender.y - 78}, ${rootRender.x - 6} ${rootRender.y - 118}
-        C ${rootRender.x + 10} ${rootRender.y - 80}, ${rootRender.x + 20} ${rootRender.y - 20}, ${rootRender.x + 34} ${rootRender.y + 42}
-        C ${rootRender.x + 14} ${rootRender.y + 58}, ${rootRender.x - 14} ${rootRender.y + 58}, ${rootRender.x - 34} ${rootRender.y + 42} Z`
-      )
-      .attr('fill', 'url(#trunk-gradient)')
-      .attr('opacity', 0.98)
-      .attr('filter', 'url(#soft-shadow)')
+    if (!isDebateTree(rootData)) {
+      gContainer
+        .append('path')
+        .attr('class', 'main-trunk')
+        .attr(
+          'd',
+          `M ${rootRender.x - 34} ${rootRender.y + 42}
+          C ${rootRender.x - 18} ${rootRender.y - 20}, ${rootRender.x - 18} ${rootRender.y - 78}, ${rootRender.x - 6} ${rootRender.y - 118}
+          C ${rootRender.x + 10} ${rootRender.y - 80}, ${rootRender.x + 20} ${rootRender.y - 20}, ${rootRender.x + 34} ${rootRender.y + 42}
+          C ${rootRender.x + 14} ${rootRender.y + 58}, ${rootRender.x - 14} ${rootRender.y + 58}, ${rootRender.x - 34} ${rootRender.y + 42} Z`
+        )
+        .attr('fill', 'url(#trunk-gradient)')
+        .attr('opacity', 0.98)
+        .attr('filter', 'url(#soft-shadow)')
+    } else {
+      const stanceGroup = gContainer.append('g').attr('class', 'debate-stance-text')
+      ;[
+        {
+          x: rootRender.x - 158,
+          y: rootRender.y - 4,
+          label: '正方',
+          text: debateStanceText(rootData, 'pro'),
+          fill: 'rgba(245, 255, 219, 0.8)',
+        },
+        {
+          x: rootRender.x + 158,
+          y: rootRender.y - 4,
+          label: '反方',
+          text: debateStanceText(rootData, 'con'),
+          fill: 'rgba(255, 240, 211, 0.82)',
+        },
+      ].forEach((item) => {
+        const labelText = `${item.label} · ${truncateLabel(item.text, 7)}`
+        stanceGroup
+          .append('rect')
+          .attr('x', item.x - 76)
+          .attr('y', item.y - 18)
+          .attr('width', 152)
+          .attr('height', 32)
+          .attr('rx', 16)
+          .attr('fill', item.fill)
+          .attr('stroke', 'rgba(255, 255, 238, 0.52)')
+          .attr('stroke-width', 1)
+        stanceGroup
+          .append('text')
+          .attr('x', item.x)
+          .attr('y', item.y + 3)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#35442b')
+          .attr('font-size', '15px')
+          .attr('font-weight', '800')
+          .text(labelText)
+      })
+    }
   }
 
   gContainer
@@ -468,7 +726,10 @@ function renderTree(nodes: TreeNode[]) {
     .selectAll('.node')
     .data(renderNodes)
     .join('g')
-    .attr('class', (d) => `node node-${d.data.nodeType} ${d.data.nodeType === 'insight' ? 'node-ai' : ''}`)
+    .attr('class', (d) => {
+      const role = debateRoleForRender(d)
+      return `node node-${d.data.nodeType} ${d.data.nodeType === 'insight' ? 'node-ai' : ''} ${role ? `node-debate-${role}` : ''}`
+    })
     .attr('transform', (d) => `translate(${d.x},${d.y})`)
     .style('cursor', 'pointer')
     .on('click', (event, d) => {
@@ -481,18 +742,36 @@ function renderTree(nodes: TreeNode[]) {
   nodeGroups
     .append('rect')
     .attr('class', 'text-bg')
-    .attr('x', (d) => (d.data.nodeType === 'root' ? -72 : -58))
-    .attr('y', (d) => (d.data.nodeType === 'root' ? 70 : 42))
-    .attr('width', (d) => (d.data.nodeType === 'root' ? 144 : 108))
-    .attr('height', 26)
-    .attr('rx', 13)
-    .attr('fill', (d) => (d.data.nodeType === 'root' ? 'rgba(33, 34, 28, 0.72)' : 'rgba(255, 255, 245, 0.74)'))
+    .attr('x', (d) => {
+      if (d.data.nodeType !== 'root') return -58
+      return isDebateTree(d.data) ? -118 : -72
+    })
+    .attr('y', (d) => {
+      if (d.data.nodeType !== 'root') return 42
+      return isDebateTree(d.data) ? 84 : 70
+    })
+    .attr('width', (d) => {
+      if (d.data.nodeType !== 'root') return 108
+      return isDebateTree(d.data) ? 236 : 144
+    })
+    .attr('height', (d) => (d.data.nodeType === 'root' && isDebateTree(d.data) ? 30 : 26))
+    .attr('rx', (d) => (d.data.nodeType === 'root' && isDebateTree(d.data) ? 15 : 13))
+    .attr('fill', (d) => {
+      const role = debateRoleForRender(d)
+      if (d.data.nodeType === 'root') return 'rgba(33, 34, 28, 0.72)'
+      if (role === 'pro') return 'rgba(244, 255, 213, 0.84)'
+      if (role === 'con') return 'rgba(255, 238, 207, 0.86)'
+      return 'rgba(255, 255, 245, 0.74)'
+    })
 
   nodeGroups
     .append('text')
     .attr('class', 'node-text')
     .attr('text-anchor', 'middle')
-    .attr('dy', (d) => (d.data.nodeType === 'root' ? 88 : 60))
+    .attr('dy', (d) => {
+      if (d.data.nodeType !== 'root') return 60
+      return isDebateTree(d.data) ? 104 : 88
+    })
     .attr('fill', (d) => (d.data.nodeType === 'root' ? '#fff9dc' : '#3b3b2c'))
     .attr('font-size', (d) => (d.data.nodeType === 'root' ? '13px' : '12px'))
     .attr('font-weight', '800')
@@ -504,6 +783,7 @@ function renderTree(nodes: TreeNode[]) {
     .attr('cx', (d) => (d.data.nodeType === 'root' ? 40 : 46))
     .attr('cy', (d) => (d.data.nodeType === 'root' ? -88 : -44))
     .attr('r', 11)
+    .attr('display', (d) => (d.data.nodeType === 'root' && isDebateTree(d.data) ? 'none' : null))
     .attr('fill', '#f7f4dc')
     .attr('stroke', '#556743')
     .attr('stroke-width', 2)
@@ -518,12 +798,48 @@ function renderTree(nodes: TreeNode[]) {
     .attr('class', 'node-add-text')
     .attr('x', (d) => (d.data.nodeType === 'root' ? 40 : 46))
     .attr('y', (d) => (d.data.nodeType === 'root' ? -84 : -40))
+    .attr('display', (d) => (d.data.nodeType === 'root' && isDebateTree(d.data) ? 'none' : null))
     .attr('text-anchor', 'middle')
     .attr('fill', '#2f3d2a')
     .attr('font-size', '17px')
     .attr('font-weight', '900')
     .text('+')
     .style('pointer-events', 'none')
+
+  if (rootRender && isDebateTree(rootData)) {
+    const sideAddButtons = [
+      { role: 'pro' as const, x: rootRender.x - 72, y: rootRender.y - 132 },
+      { role: 'con' as const, x: rootRender.x + 72, y: rootRender.y - 132 },
+    ]
+    const rootAddGroups = gContainer
+      .selectAll('.root-side-add')
+      .data(sideAddButtons)
+      .join('g')
+      .attr('class', (d) => `root-side-add root-side-add-${d.role}`)
+      .attr('transform', (d) => `translate(${d.x},${d.y})`)
+      .style('cursor', 'pointer')
+      .on('click', (event, d) => {
+        event.stopPropagation()
+        handleAddChild('root', d.role)
+      })
+
+    rootAddGroups
+      .append('circle')
+      .attr('r', 13)
+      .attr('fill', '#f7f4dc')
+      .attr('stroke', '#556743')
+      .attr('stroke-width', 2.2)
+
+    rootAddGroups
+      .append('text')
+      .attr('text-anchor', 'middle')
+      .attr('y', 5)
+      .attr('fill', '#2f3d2a')
+      .attr('font-size', '18px')
+      .attr('font-weight', '900')
+      .text('+')
+      .style('pointer-events', 'none')
+  }
 
   perfMetrics.value = `Render Time: ${(performance.now() - startTime).toFixed(2)} ms | Nodes: ${renderNodes.length}`
 }
@@ -559,14 +875,18 @@ function handleNodeDelete(id: string) {
   selectedNode.value = null
 }
 
-function handleAddChild(parentId: string) {
+function handleAddChild(parentId: string, debateRole?: 'pro' | 'con') {
+  const isRootDirection = parentId === 'root'
   const newNode: TreeNode = {
     id: `node-${Date.now()}`,
     label: '',
     content: '',
-    nodeType: 'answer',
+    nodeType: isRootDirection ? 'direction' : 'answer',
     parentId,
     children: [],
+    metadata: {
+      ...(debateRole ? debateDirectionMetadata(debateRole) : inheritedDebateMetadata(parentId)),
+    },
   }
 
   treeStore.addNode(parentId, newNode)
@@ -633,6 +953,7 @@ async function handleRecordingComplete(data: { base64: string; pcm: Int16Array; 
         parentId,
         children: [],
         metadata: {
+          ...inheritedDebateMetadata(parentId),
           source: 'speech',
           confidence: result.confidence,
           recommendedParentLabel: result.recommended_parent_label,
@@ -763,7 +1084,14 @@ function openExportDialog() {
 
 <template>
   <div class="tree-wrapper">
-    <TreeSetup v-if="showSetup" @complete="initializeTree" />
+    <TreeSetup
+      v-if="showSetup"
+      :initial-theme="treeStore.title === 'New Thinking Tree' ? '' : treeStore.title"
+      :initial-mode="treeStore.activityMode"
+      :initial-pro-label="treeStore.debateProLabel"
+      :initial-con-label="treeStore.debateConLabel"
+      @complete="initializeTree"
+    />
 
     <template v-else>
       <div class="woods-background"></div>

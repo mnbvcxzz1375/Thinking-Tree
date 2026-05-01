@@ -9,6 +9,9 @@
       <span class="activity-card__badge" :class="difficultyClass">
         {{ difficultyLabel }}
       </span>
+      <span class="activity-card__badge activity-card__badge--mode">
+        {{ activity.activity_mode === 'debate' ? '辩论' : '普通' }}
+      </span>
     </div>
 
     <p v-if="activity.description" class="activity-card__desc">
@@ -18,6 +21,9 @@
     <div class="activity-card__meta">
       <span v-if="activity.age_group" class="activity-card__tag">
         {{ activity.age_group }}
+      </span>
+      <span v-if="activity.activity_mode === 'debate'" class="activity-card__tag activity-card__tag--debate">
+        正：{{ activity.debate_pro_label }} / 反：{{ activity.debate_con_label }}
       </span>
       <span v-if="!activity.is_active" class="activity-card__tag activity-card__tag--inactive">
         已停用
@@ -125,6 +131,10 @@ function formatDate(dateStr: string): string {
   background: #fee2e2;
   color: #991b1b;
 }
+.activity-card__badge--mode {
+  background: #edf6d0;
+  color: #314325;
+}
 .activity-card__desc {
   color: #6b7280;
   font-size: 0.875rem;
@@ -148,6 +158,10 @@ function formatDate(dateStr: string): string {
 .activity-card__tag--inactive {
   background: #fee2e2;
   color: #991b1b;
+}
+.activity-card__tag--debate {
+  background: #fff5d6;
+  color: #5b4a1f;
 }
 .activity-card__date {
   font-size: 0.75rem;

@@ -22,6 +22,9 @@ export interface TreeState {
   title: string
   description: string
   instructions: string
+  activityMode: 'normal' | 'debate'
+  debateProLabel: string
+  debateConLabel: string
   nodes: TreeNode[]
   selectedNodeId: string | null
   loading: boolean
@@ -60,6 +63,9 @@ function saveToStorage(state: TreeState): void {
         title: state.title,
         description: state.description,
         instructions: state.instructions,
+        activityMode: state.activityMode,
+        debateProLabel: state.debateProLabel,
+        debateConLabel: state.debateConLabel,
         nodes: state.nodes,
       selectedNodeId: state.selectedNodeId,
       lastSynced: state.lastSynced,
@@ -117,6 +123,9 @@ export const useTreeStore = defineStore('tree', () => {
   const title = ref(stored?.title || 'New Thinking Tree')
   const description = ref(stored?.description || '')
   const instructions = ref((stored as Partial<TreeState>)?.instructions || '')
+  const activityMode = ref<'normal' | 'debate'>((stored as Partial<TreeState>)?.activityMode || 'normal')
+  const debateProLabel = ref((stored as Partial<TreeState>)?.debateProLabel || '放走蚂蚁')
+  const debateConLabel = ref((stored as Partial<TreeState>)?.debateConLabel || '踩扁蚂蚁')
   const nodes = ref<TreeNode[]>(stored?.nodes || [])
   const selectedNodeId = ref<string | null>(stored?.selectedNodeId || null)
   const loading = ref(false)
@@ -137,7 +146,7 @@ export const useTreeStore = defineStore('tree', () => {
 
   // Watch for state changes and persist
   watch(
-    [id, title, description, instructions, nodes, selectedNodeId],
+    [id, title, description, instructions, activityMode, debateProLabel, debateConLabel, nodes, selectedNodeId],
     () => {
       isDirty.value = true
       saveToStorage({
@@ -145,23 +154,40 @@ export const useTreeStore = defineStore('tree', () => {
         title: title.value,
         description: description.value,
         instructions: instructions.value,
+        activityMode: activityMode.value,
+        debateProLabel: debateProLabel.value,
+        debateConLabel: debateConLabel.value,
         nodes: nodes.value,
         selectedNodeId: selectedNodeId.value,
         loading: loading.value,
         error: error.value,
         lastSynced: lastSynced.value,
         isDirty: isDirty.value,
+        activityId: activityId.value,
       })
     },
     { deep: true }
   )
 
   // Actions
-  function setTree(tree: { id: string; title: string; description?: string; instructions?: string; nodes: TreeNode[]; activityId?: number | null }) {
+  function setTree(tree: {
+    id: string
+    title: string
+    description?: string
+    instructions?: string
+    activityMode?: 'normal' | 'debate'
+    debateProLabel?: string
+    debateConLabel?: string
+    nodes: TreeNode[]
+    activityId?: number | null
+  }) {
     id.value = tree.id
     title.value = tree.title
     description.value = tree.description || ''
     instructions.value = tree.instructions || ''
+    activityMode.value = tree.activityMode || 'normal'
+    debateProLabel.value = tree.debateProLabel || '放走蚂蚁'
+    debateConLabel.value = tree.debateConLabel || '踩扁蚂蚁'
     nodes.value = tree.nodes
     activityId.value = tree.activityId ?? null
     isDirty.value = false
@@ -222,11 +248,17 @@ export const useTreeStore = defineStore('tree', () => {
     title?: string
     description?: string | null
     instructions?: string | null
+    activityMode?: 'normal' | 'debate'
+    debateProLabel?: string | null
+    debateConLabel?: string | null
   }) {
     if (context.activityId !== undefined) activityId.value = context.activityId
     if (context.title !== undefined) title.value = context.title
     if (context.description !== undefined) description.value = context.description || ''
     if (context.instructions !== undefined) instructions.value = context.instructions || ''
+    if (context.activityMode !== undefined) activityMode.value = context.activityMode
+    if (context.debateProLabel !== undefined) debateProLabel.value = context.debateProLabel || '放走蚂蚁'
+    if (context.debateConLabel !== undefined) debateConLabel.value = context.debateConLabel || '踩扁蚂蚁'
   }
 
   function reset() {
@@ -236,18 +268,25 @@ export const useTreeStore = defineStore('tree', () => {
       title: title.value,
       description: description.value,
       instructions: instructions.value,
+      activityMode: activityMode.value,
+      debateProLabel: debateProLabel.value,
+      debateConLabel: debateConLabel.value,
       nodes: nodes.value,
       selectedNodeId: selectedNodeId.value,
       loading: loading.value,
       error: error.value,
       lastSynced: lastSynced.value,
       isDirty: isDirty.value,
+      activityId: activityId.value,
     })
 
     id.value = null
     title.value = 'New Thinking Tree'
     description.value = ''
     instructions.value = ''
+    activityMode.value = 'normal'
+    debateProLabel.value = '放走蚂蚁'
+    debateConLabel.value = '踩扁蚂蚁'
     nodes.value = []
     selectedNodeId.value = null
     loading.value = false
@@ -274,6 +313,9 @@ export const useTreeStore = defineStore('tree', () => {
       title: title.value,
       description: description.value,
       instructions: instructions.value,
+      activityMode: activityMode.value,
+      debateProLabel: debateProLabel.value,
+      debateConLabel: debateConLabel.value,
       nodes: nodes.value,
       selectedNodeId: selectedNodeId.value,
       loading: loading.value,
@@ -289,6 +331,9 @@ export const useTreeStore = defineStore('tree', () => {
     title.value = state.title
     description.value = state.description
     instructions.value = state.instructions || ''
+    activityMode.value = state.activityMode || 'normal'
+    debateProLabel.value = state.debateProLabel || '放走蚂蚁'
+    debateConLabel.value = state.debateConLabel || '踩扁蚂蚁'
     nodes.value = state.nodes
     selectedNodeId.value = state.selectedNodeId
     activityId.value = state.activityId
@@ -301,6 +346,9 @@ export const useTreeStore = defineStore('tree', () => {
     title,
     description,
     instructions,
+    activityMode,
+    debateProLabel,
+    debateConLabel,
     nodes,
     selectedNodeId,
     loading,

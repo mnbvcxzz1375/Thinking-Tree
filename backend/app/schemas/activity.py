@@ -16,6 +16,15 @@ class ActivityBase(BaseModel):
     instructions: Optional[str] = Field(
         None, max_length=5000, description="Activity instructions"
     )
+    activity_mode: str = Field(
+        default="normal", description="Activity mode: normal or debate"
+    )
+    debate_pro_label: Optional[str] = Field(
+        None, max_length=255, description="Positive side label for debate mode"
+    )
+    debate_con_label: Optional[str] = Field(
+        None, max_length=255, description="Negative side label for debate mode"
+    )
     difficulty_level: str = Field(
         default="medium", description="Difficulty level"
     )
@@ -29,6 +38,15 @@ class ActivityBase(BaseModel):
         allowed = ["easy", "medium", "hard"]
         if v.lower() not in allowed:
             raise ValueError(f"difficulty_level must be one of {allowed}")
+        return v.lower()
+
+    @field_validator("activity_mode")
+    @classmethod
+    def validate_activity_mode(cls, v: str) -> str:
+        """Validate activity mode."""
+        allowed = ["normal", "debate"]
+        if v.lower() not in allowed:
+            raise ValueError(f"activity_mode must be one of {allowed}")
         return v.lower()
 
     @field_validator("age_group")
@@ -55,6 +73,9 @@ class ActivityUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
     instructions: Optional[str] = Field(None, max_length=5000)
+    activity_mode: Optional[str] = None
+    debate_pro_label: Optional[str] = Field(None, max_length=255)
+    debate_con_label: Optional[str] = Field(None, max_length=255)
     difficulty_level: Optional[str] = None
     age_group: Optional[str] = None
     is_active: Optional[bool] = None
@@ -68,6 +89,17 @@ class ActivityUpdate(BaseModel):
         allowed = ["easy", "medium", "hard"]
         if v.lower() not in allowed:
             raise ValueError(f"difficulty_level must be one of {allowed}")
+        return v.lower()
+
+    @field_validator("activity_mode")
+    @classmethod
+    def validate_activity_mode(cls, v: Optional[str]) -> Optional[str]:
+        """Validate activity mode."""
+        if v is None:
+            return v
+        allowed = ["normal", "debate"]
+        if v.lower() not in allowed:
+            raise ValueError(f"activity_mode must be one of {allowed}")
         return v.lower()
 
     @field_validator("age_group")
