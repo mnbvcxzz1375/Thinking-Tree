@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: thinking-tree-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-thinking_tree}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tree-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: thinking-tree-api
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./backend:/app
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8765
+      - DEBUG=true
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-thinking_tree}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - QWEN_MODEL=${QWEN_MODEL:-qwen3.5-omni-flash-realtime}
+      - QWEN_REGION=${QWEN_REGION:-cn}
+      - QWEN_WS_BASE_URL=${QWEN_WS_BASE_URL:-wss://dashscope.aliyuncs.com/api-ws/v1/realtime}
+      - AUDIO_SAMPLE_RATE=16000
+      - AUDIO_BIT_DEPTH=16
+      - AUDIO_CHANNELS=1
+      - AUDIO_CHUNK_SIZE=3200
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tree-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: thinking-tree-web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - NUXT_PUBLIC_API_URL=http://localhost:8765
+    depends_on:
+      - backend
+    networks:
+      - tree-network
+
+volumes:
+  postgres_data:
+
+networks:
+  tree-network:
+    driver: bridge

@@ -1,0 +1,52 @@
+# Environment secrets - NEVER commit
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+.venv/
+venv/
+
+# Audio temp files
+*.wav
+*.pcm
+*.mp3
+audio_temp/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+coverage.xml
+
+# Build
+.nuxt/
+.output/
+dist/
+
+# Docker
+.docker/
+
+# IDE
+.vscode/settings.json
+.idea/

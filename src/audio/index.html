@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PCM Conversion Prototype — Audio Processing Pipeline</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #141420;
+      --surface2: #1a1a2e;
+      --border: #2a2a40;
+      --text: #e0e0e0;
+      --text2: #8888aa;
+      --accent: #4fc3f7;
+      --accent2: #81c784;
+      --warn: #ffb74d;
+      --error: #ef5350;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text2);
+    }
+
+    .subtitle {
+      color: var(--text2);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+
+    /* Card layout */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* Browser info table */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .info-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .info-table td:first-child {
+      color: var(--text2);
+      width: 160px;
+    }
+    .info-table td:last-child {
+      font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+    }
+    .supported { color: var(--accent2); }
+    .partial { color: var(--warn); }
+    .unsupported { color: var(--error); }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-record {
+      background: var(--error);
+      color: white;
+    }
+    .btn-record:hover:not(:disabled) { background: #ff1744; }
+    .btn-record.recording {
+      animation: pulse 1.5s infinite;
+    }
+    .btn-pause {
+      background: var(--warn);
+      color: #1a1a1a;
+    }
+    .btn-stop {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-clear {
+      background: transparent;
+      color: var(--text2);
+      border: 1px solid var(--border);
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.4); }
+      50% { box-shadow: 0 0 0 12px rgba(239, 83, 80, 0); }
+    }
+
+    /* Status badge */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 0.85rem;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-dot.idle { background: var(--text2); }
+    .status-dot.recording { background: var(--error); animation: pulse-dot 1s infinite; }
+    .status-dot.paused { background: var(--warn); }
+    .status-dot.stopped { background: var(--accent); }
+    .status-dot.error { background: var(--error); }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Waveform canvas */
+    #waveform {
+      width: 100%;
+      height: 120px;
+      background: var(--surface2);
+      border-radius: var(--radius);
+      display: block;
+      border: 1px solid var(--border);
+    }
+
+    /* Chunk log */
+    .chunk-log {
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+      font-size: 0.78rem;
+      color: var(--text2);
+    }
+    .chunk-log .entry {
+      padding: 4px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .chunk-log .entry:last-child { border-bottom: none; }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .stat-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text2);
+      margin-top: 4px;
+    }
+
+    /* Permission banner */
+    .banner {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    .banner.info { background: rgba(79, 195, 247, 0.1); border: 1px solid rgba(79, 195, 247, 0.3); color: var(--accent); }
+    .banner.warn { background: rgba(255, 183, 77, 0.1); border: 1px solid rgba(255, 183, 77, 0.3); color: var(--warn); }
+    .banner.error { background: rgba(239, 83, 80, 0.1); border: 1px solid rgba(239, 83, 80, 0.3); color: var(--error); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Audio PCM Conversion Prototype</h1>
+  <p class="subtitle">Task 0.3 — Browser Audio Compatibility Audit &amp; PCM Pipeline</p>
+
+  <!-- Permission / Error Banner -->
+  <div id="banner" class="banner info" style="display:none;"></div>
+
+  <!-- Browser Capability Card -->
+  <div class="card">
+    <h2>Browser Capabilities</h2>
+    <table class="info-table" id="capability-table">
+      <tr id="cap-browser"><td>Browser</td><td>Detecting...</td></tr>
+      <tr id="cap-audioworklet"><td>AudioWorklet</td><td>Detecting...</td></tr>
+      <tr id="cap-mediarecorder"><td>MediaRecorder</td><td>Detecting...</td></tr>
+      <tr id="cap-getusermedia"><td>getUserMedia</td><td>Detecting...</td></tr>
+      <tr id="cap-samplerate"><td>AudioContext SampleRate</td><td>Not created yet</td></tr>
+      <tr id="cap-permissions"><td>Permission Query API</td><td>Detecting...</td></tr>
+      <tr id="cap-path"><td>Recording Path</td><td>—</td></tr>
+    </table>
+  </div>
+
+  <!-- Recording Controls -->
+  <div class="card">
+    <h2>Recording Control</h2>
+    <div class="status-indicator">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Idle</span>
+    </div>
+    <div class="controls">
+      <button class="btn btn-record" id="btn-record" onclick="startRecording()">Start Recording</button>
+      <button class="btn btn-pause" id="btn-pause" onclick="pauseRecording()" disabled>Pause</button>
+      <button class="btn btn-stop" id="btn-stop" onclick="stopRecording()" disabled>Stop</button>
+      <button class="btn btn-clear" id="btn-clear" onclick="clearData()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Live Waveform -->
+  <div class="card">
+    <h2>Live Waveform</h2>
+    <canvas id="waveform" width="860" height="120"></canvas>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>Recording Stats</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value" id="stat-chunks">0</div>
+          <div class="stat-label">PCM Chunks</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-duration">0.0s</div>
+          <div class="stat-label">Duration</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-samples">0</div>
+          <div class="stat-label">Total Samples</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-datarate">0 KB/s</div>
+          <div class="stat-label">Data Rate</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Performance</h2>
+      <div class="stats-grid" id="perf-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="perf-avg">—</div>
+          <div class="stat-label">Avg Chunk Size</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="perf-total">0</div>
+          <div class="stat-label">Total Data (KB)</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="perf-samplerate">—</div>
+          <div class="stat-label">Source Rate</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PCM Chunk Log -->
+  <div class="card">
+    <h2>PCM Chunk Log (last 20)</h2>
+    <div class="chunk-log" id="chunk-log">
+      <div class="entry" style="color:var(--text2)">Waiting for recording to start...</div>
+    </div>
+  </div>
+
+  <!-- Latest Base64 Preview -->
+  <div class="card">
+    <h2>Latest PCM Base64 Preview</h2>
+    <div class="chunk-log" id="base64-preview">
+      <div class="entry" style="color:var(--text2)">No chunks recorded yet</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="AudioRecorder.js"></script>
+<script src="FirefoxFallback.js"></script>
+
+<script>
+  // ─── State ─────────────────────────────────────────────────
+  let recorder = null;
+  let chunks = [];
+  let waveformHistory = []; // For canvas visualization
+  const MAX_WAVEFORM_POINTS = 200;
+  const MAX_LOG_ENTRIES = 20;
+  let totalDataBytes = 0;
+  let recordingStartTime = 0;
+
+  // ─── Initialize ────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    detectCapabilities();
+    initWaveformCanvas();
+  });
+
+  // ─── Capability Detection ──────────────────────────────────
+  function detectCapabilities() {
+    const browser = AudioRecorder.detectBrowser();
+    const hasAudioWorklet = typeof AudioWorkletNode !== 'undefined';
+    const hasMediaRecorder = typeof MediaRecorder !== 'undefined';
+    const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    const hasPermQuery = !!(navigator.permissions && navigator.permissions.query);
+
+    setCapCell('cap-browser', `${browser.name} ${browser.version || ''} ${browser.mobile ? '(mobile)' : '(desktop)'}`, 'supported');
+    setCapCell('cap-audioworklet', hasAudioWorklet ? 'Supported ✅' : 'Not supported ❌', hasAudioWorklet ? 'supported' : 'unsupported');
+    setCapCell('cap-mediarecorder', hasMediaRecorder ? 'Supported ✅' : 'Not supported ❌', hasMediaRecorder ? 'supported' : 'unsupported');
+    setCapCell('cap-getusermedia', hasGetUserMedia ? 'Supported ✅' : 'Not supported ❌', hasGetUserMedia ? 'supported' : 'unsupported');
+    setCapCell('cap-permissions', hasPermQuery ? 'Supported ✅' : 'Not supported (Firefox limitation) ⚠️', hasPermQuery ? 'supported' : 'partial');
+
+    // Recommend path
+    const rec = hasAudioWorklet ? 'AudioWorklet (optimal)' : 'ScriptProcessorNode (fallback)';
+    setCapCell('cap-path', rec, hasAudioWorklet ? 'supported' : 'partial');
+
+    // Try to create audio context to detect sample rate
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      setCapCell('cap-samplerate', `${ctx.sampleRate} Hz`, 'supported');
+      ctx.close();
+    } catch (e) {
+      setCapCell('cap-samplerate', 'Not available', 'unsupported');
+    }
+  }
+
+  function setCapCell(id, text, cls) {
+    const row = document.getElementById(id);
+    if (!row) return;
+    const td = row.querySelector('td:last-child');
+    if (td) {
+      td.textContent = text;
+      td.className = cls;
+    }
+  }
+
+  // ─── Banner ────────────────────────────────────────────────
+  function showBanner(text, type) {
+    const banner = document.getElementById('banner');
+    banner.textContent = text;
+    banner.className = 'banner ' + type;
+    banner.style.display = 'block';
+  }
+
+  function hideBanner() {
+    document.getElementById('banner').style.display = 'none';
+  }
+
+  // ─── Controls ──────────────────────────────────────────────
+  async function startRecording() {
+    hideBanner();
+    clearData();
+
+    try {
+      recorder = new AudioRecorder({
+        onPCMChunk: handlePCMChunk,
+        onStateChange: handleStateChange,
+        onError: handleError,
+        onPermission: (granted) => {
+          if (!granted) {
+            showBanner('Microphone permission denied. Please allow microphone access in your browser settings.', 'error');
+          }
+        },
+        targetSampleRate: 16000,
+        chunkInterval: 100,
+        resampleQuality: 'medium',
+      });
+
+      recordingStartTime = performance.now();
+      await recorder.start();
+
+      // Update sample rate display
+      if (recorder.capabilities.sampleRate > 0) {
+        setCapCell('cap-samplerate', `${recorder.capabilities.sampleRate} Hz`, 'supported');
+      }
+
+      updateButtons('recording');
+      showBanner('Recording in progress — PCM chunks streaming at 16kHz/16bit/mono', 'info');
+
+      // Auto-hide banner after 3s
+      setTimeout(hideBanner, 3000);
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  function pauseRecording() {
+    if (!recorder || recorder.state !== 'recording') return;
+    recorder.pause();
+    updateButtons('paused');
+    showBanner('Recording paused', 'warn');
+  }
+
+  function stopRecording() {
+    if (!recorder) return;
+    recorder.stop();
+    updateButtons('stopped');
+    hideBanner();
+    updateStats();
+  }
+
+  function clearData() {
+    chunks = [];
+    waveformHistory = [];
+    totalDataBytes = 0;
+    recordingStartTime = 0;
+    document.getElementById('chunk-log').innerHTML = '<div class="entry" style="color:var(--text2)">Waiting for recording to start...</div>';
+    document.getElementById('base64-preview').innerHTML = '<div class="entry" style="color:var(--text2)">No chunks recorded yet</div>';
+    document.getElementById('stat-chunks').textContent = '0';
+    document.getElementById('stat-duration').textContent = '0.0s';
+    document.getElementById('stat-samples').textContent = '0';
+    document.getElementById('stat-datarate').textContent = '0 KB/s';
+    document.getElementById('perf-avg').textContent = '—';
+    document.getElementById('perf-total').textContent = '0';
+    document.getElementById('perf-samplerate').textContent = '—';
+    drawWaveform();
+  }
+
+  function updateButtons(state) {
+    const btnRecord = document.getElementById('btn-record');
+    const btnPause = document.getElementById('btn-pause');
+    const btnStop = document.getElementById('btn-stop');
+
+    switch (state) {
+      case 'recording':
+        btnRecord.disabled = true;
+        btnRecord.classList.add('recording');
+        btnRecord.textContent = 'Recording...';
+        btnPause.disabled = false;
+        btnStop.disabled = false;
+        break;
+      case 'paused':
+        btnRecord.disabled = false;
+        btnRecord.classList.remove('recording');
+        btnRecord.textContent = 'Resume';
+        btnPause.disabled = true;
+        btnStop.disabled = false;
+        break;
+      case 'stopped':
+        btnRecord.disabled = false;
+        btnRecord.classList.remove('recording');
+        btnRecord.textContent = 'Start Recording';
+        btnPause.disabled = true;
+        btnStop.disabled = true;
+        break;
+    }
+  }
+
+  // ─── Event Handlers ────────────────────────────────────────
+  function handlePCMChunk(chunk) {
+    chunks.push(chunk);
+
+    // Track data
+    totalDataBytes += chunk.data.byteLength;
+
+    // Update waveform display
+    waveformHistory.push(chunk.data);
+    if (waveformHistory.length > MAX_WAVEFORM_POINTS) {
+      waveformHistory.shift();
+    }
+    drawWaveform();
+
+    // Update live stats
+    updateLiveStats(chunk);
+
+    // Log entry
+    addLogEntry(chunk);
+
+    // Update base64 preview (show first 120 chars)
+    updateBase64Preview(chunk);
+  }
+
+  function handleStateChange(state) {
+    document.getElementById('status-text').textContent =
+      state.charAt(0).toUpperCase() + state.slice(1);
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-dot ' + state;
+  }
+
+  function handleError(err) {
+    console.error('[Demo] Error:', err);
+    showBanner(`Error: ${err.message}`, 'error');
+    document.getElementById('status-text').textContent = 'Error';
+    document.getElementById('status-dot').className = 'status-dot error';
+
+    // Classify error for user-facing message
+    const msg = err.message || String(err);
+    let userMessage;
+    if (msg.includes('denied')) {
+      userMessage = 'Microphone access was denied. Please allow microphone access in your browser settings and try again.';
+    } else if (msg.includes('not found') || msg.includes('No microphone')) {
+      userMessage = 'No microphone detected. Please connect a microphone and try again.';
+    } else if (msg.includes('in use')) {
+      userMessage = 'Microphone is being used by another application. Please close other apps and try again.';
+    } else if (msg.includes('not supported')) {
+      userMessage = 'Your browser does not support audio recording. Please try Chrome, Edge, or Safari.';
+    } else {
+      userMessage = msg;
+    }
+    showBanner(userMessage, 'error');
+  }
+
+  // ─── Waveform Drawing ──────────────────────────────────────
+  function initWaveformCanvas() {
+    const canvas = document.getElementById('waveform');
+    // Set actual pixel size
+    canvas.width = canvas.clientWidth * window.devicePixelRatio;
+    canvas.height = canvas.clientHeight * window.devicePixelRatio;
+
+    window.addEventListener('resize', () => {
+      canvas.width = canvas.clientWidth * window.devicePixelRatio;
+      canvas.height = canvas.clientHeight * window.devicePixelRatio;
+      drawWaveform();
+    });
+  }
+
+  function drawWaveform() {
+    const canvas = document.getElementById('waveform');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const dpr = window.devicePixelRatio;
+
+    // Clear
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1 * dpr;
+    const midY = height / 2;
+    ctx.beginPath();
+    ctx.moveTo(0, midY);
+    ctx.lineTo(width, midY);
+    ctx.stroke();
+
+    if (waveformHistory.length === 0) return;
+
+    // Compute RMS envelope for each chunk
+    const envelope = waveformHistory.map((chunk) => {
+      let sum = 0;
+      for (let i = 0; i < chunk.length; i++) {
+        sum += chunk[i] * chunk[i];
+      }
+      return Math.sqrt(sum / (chunk.length || 1)) / 32768; // Normalize to [0,1]
+    });
+
+    // Draw envelope line
+    const barWidth = width / MAX_WAVEFORM_POINTS;
+    const amp = height * 0.4;
+
+    ctx.fillStyle = 'rgba(79, 195, 247, 0.6)';
+    const startX = Math.max(0, width - envelope.length * barWidth);
+
+    for (let i = 0; i < envelope.length; i++) {
+      const x = startX + i * barWidth;
+      const h = Math.max(2 * dpr, envelope[i] * amp * 2);
+      const y = midY - h / 2;
+      ctx.fillRect(x, y, Math.max(1, barWidth - 1), h);
+    }
+
+    // Draw peak hold dots
+    ctx.fillStyle = 'rgba(129, 199, 132, 0.8)';
+    for (let i = 0; i < envelope.length; i++) {
+      const x = startX + i * barWidth + barWidth / 2;
+      const peak = envelope[i] * amp;
+      const yTop = midY - peak;
+      const yBot = midY + peak;
+      ctx.beginPath();
+      ctx.arc(x, yTop, 2 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x, yBot, 2 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Draw axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = `${10 * dpr}px sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText('1.0', 30 * dpr, 12 * dpr);
+    ctx.fillText('-1.0', 30 * dpr, height - 4 * dpr);
+    ctx.textAlign = 'left';
+    ctx.fillText('16-bit PCM envelope', width - 140 * dpr, 12 * dpr);
+  }
+
+  // ─── Live Stats ────────────────────────────────────────────
+  function updateLiveStats(chunk) {
+    document.getElementById('stat-chunks').textContent = chunks.length;
+    document.getElementById('stat-samples').textContent =
+      chunks.reduce((sum, c) => sum + c.sampleCount, 0).toLocaleString();
+
+    const elapsed = (Date.now() - recordingStartTime) / 1000;
+    document.getElementById('stat-duration').textContent = elapsed.toFixed(1) + 's';
+
+    const dataRate = elapsed > 0 ? (totalDataBytes / 1024 / elapsed) : 0;
+    document.getElementById('stat-datarate').textContent = dataRate.toFixed(1) + ' KB/s';
+
+    const avgSize = chunks.length > 0 ? (totalDataBytes / chunks.length) : 0;
+    document.getElementById('perf-avg').textContent = (avgSize / 1024).toFixed(2) + ' KB';
+    document.getElementById('perf-total').textContent = (totalDataBytes / 1024).toFixed(1);
+    document.getElementById('perf-samplerate').textContent =
+      recorder && recorder.capabilities ? recorder.capabilities.sampleRate + ' Hz' : '—';
+  }
+
+  function updateStats() {
+    if (chunks.length === 0) return;
+    const elapsed = (Date.now() - recordingStartTime) / 1000;
+    document.getElementById('stat-duration').textContent = elapsed.toFixed(1) + 's';
+    const dataRate = elapsed > 0 ? (totalDataBytes / 1024 / elapsed) : 0;
+    document.getElementById('stat-datarate').textContent = dataRate.toFixed(1) + ' KB/s';
+  }
+
+  // ─── Log ───────────────────────────────────────────────────
+  function addLogEntry(chunk) {
+    const log = document.getElementById('chunk-log');
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    entry.textContent = `[${new Date(chunk.timestamp).toISOString().split('T')[1]}] Chunk #${chunks.length}: ${chunk.sampleCount} samples, ${chunk.durationMs.toFixed(0)}ms, ${(chunk.data.byteLength / 1024).toFixed(2)}KB PCM, Base64: ${(chunk.base64.length / 1024).toFixed(1)}KB`;
+    log.prepend(entry);
+
+    // Keep only last N entries
+    while (log.children.length > MAX_LOG_ENTRIES + 1) {
+      log.removeChild(log.lastChild);
+    }
+  }
+
+  function updateBase64Preview(chunk) {
+    const preview = document.getElementById('base64-preview');
+    const base64 = chunk.base64;
+    const snippet = base64.length > 120 ? base64.substring(0, 120) + '...' : base64;
+    preview.innerHTML = `<div class="entry" style="word-break:break-all;line-height:1.5">${snippet}</div>`;
+  }
+</script>
+
+</body>
+</html>

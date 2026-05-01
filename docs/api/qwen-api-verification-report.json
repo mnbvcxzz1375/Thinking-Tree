@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-04-30T23:48:42.044775",
+  "model": "qwen3.5-omni-flash-realtime",
+  "region": "cn",
+  "ws_url": "wss://dashscope.aliyuncs.com/api-ws/v1/realtime?model=qwen3.5-omni-flash-realtime",
+  "tests": [
+    {
+      "name": "api_key_format",
+      "status": "PASS"
+    },
+    {
+      "name": "websocket_connect",
+      "status": "PASS"
+    },
+    {
+      "name": "session_created",
+      "status": "PASS",
+      "session_id": "sess_CIMsb5LD4W8xZm8JUMbrb"
+    },
+    {
+      "name": "session_update",
+      "status": "PASS"
+    },
+    {
+      "name": "audio_input",
+      "status": "PASS",
+      "audio_bytes": 16000,
+      "format": "16kHz/16bit/mono/PCM"
+    },
+    {
+      "name": "audio_response",
+      "status": "FAIL",
+      "error": {
+        "event_id": "event_EdEyhJno5gTey1QWFveCU",
+        "type": "error",
+        "error": {
+          "code": "COMMON_ERROR",
+          "message": "<400> InternalError.Algo.InvalidParameter: Voice 'Chelsie' is not supported."
+        }
+      }
+    },
+    {
+      "name": "audio_response",
+      "status": "WARN",
+      "message": "No response.done"
+    }
+  ]
+}
