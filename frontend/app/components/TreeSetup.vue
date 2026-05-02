@@ -167,81 +167,83 @@ function applyDebatePreset() {
         <p>设置活动主题和思考结构，开始孩子的表达整理</p>
       </div>
 
-      <div class="setup-body">
-        <div class="section">
-          <h2>模式</h2>
-          <div class="mode-tabs">
-            <button :class="{ active: mode === 'normal' }" @click="mode = 'normal'">普通思维树</button>
-            <button :class="{ active: mode === 'debate' }" @click="mode = 'debate'">辩论模式</button>
-          </div>
-        </div>
-
-        <div class="section">
-          <h2>活动主题</h2>
-          <p class="hint">这是根节点，代表本次活动或辩论题目。</p>
-          <input
-            v-model="theme"
-            placeholder="例如：放走蚂蚁 / 踩扁蚂蚁"
-            class="theme-input"
-          />
-        </div>
-
-        <div class="section">
-          <h2>快速模板</h2>
-          <div class="presets">
-            <button v-for="preset in presets" :key="preset.theme" class="preset-btn" @click="applyPreset(preset)">
-              {{ preset.theme }}
-            </button>
-            <button class="preset-btn preset-btn--debate" @click="applyDebatePreset">
-              放走蚂蚁 / 踩扁蚂蚁
-            </button>
-          </div>
-        </div>
-
-        <div v-if="mode === 'debate'" class="section debate-panel">
-          <h2>正反方观点</h2>
-          <div class="stance-grid">
-            <label>
-              <span>正方</span>
-              <input v-model="proLabel" placeholder="例如：放走蚂蚁" />
-            </label>
-            <label>
-              <span>反方</span>
-              <input v-model="conLabel" placeholder="例如：踩扁蚂蚁" />
-            </label>
-          </div>
-        </div>
-
-        <div class="section">
-          <h2>{{ mode === 'debate' ? '双方共用的方向叶子' : '思考方向' }}</h2>
-          <p class="hint">
-            {{ mode === 'debate' ? '这些方向会同时生成到正方和反方下面，后续还能继续往下延展。' : '设置一级方向节点，引导孩子从不同角度思考。' }}
-          </p>
-
-          <div class="directions-list">
-            <div v-for="(dir, index) in activeDirections" :key="dir.id" class="direction-item">
-              <select v-model="dir.emoji" class="emoji-select">
-                <option v-for="emoji in emojiOptions" :key="emoji" :value="emoji">{{ emoji }}</option>
-              </select>
-
-              <input
-                v-model="dir.name"
-                :placeholder="mode === 'debate' ? `方向 ${index + 1}：例如理由、后果、感受` : `方向 ${index + 1}：例如外形、生命`"
-                class="direction-input"
-              />
-
-              <button v-if="activeDirections.length > 1" class="remove-btn" @click="removeDirection(index)">×</button>
+      <div class="setup-scroll">
+        <div class="setup-body">
+          <div class="section">
+            <h2>模式</h2>
+            <div class="mode-tabs">
+              <button :class="{ active: mode === 'normal' }" @click="mode = 'normal'">普通思维树</button>
+              <button :class="{ active: mode === 'debate' }" @click="mode = 'debate'">辩论模式</button>
             </div>
           </div>
 
-          <button v-if="activeDirections.length < 8" class="add-btn" @click="addDirection">＋ 添加方向</button>
-        </div>
-      </div>
+          <div class="section">
+            <h2>活动主题</h2>
+            <p class="hint">这是根节点，代表本次活动或辩论题目。</p>
+            <input
+              v-model="theme"
+              placeholder="例如：放走蚂蚁 / 踩扁蚂蚁"
+              class="theme-input"
+            />
+          </div>
 
-      <div class="setup-footer">
-        <button class="start-btn" :disabled="!canSubmit" @click="handleSubmit">
-          🌱 开始创建思维树
-        </button>
+          <div class="section">
+            <h2>快速模板</h2>
+            <div class="presets">
+              <button v-for="preset in presets" :key="preset.theme" class="preset-btn" @click="applyPreset(preset)">
+                {{ preset.theme }}
+              </button>
+              <button class="preset-btn preset-btn--debate" @click="applyDebatePreset">
+                放走蚂蚁 / 踩扁蚂蚁
+              </button>
+            </div>
+          </div>
+
+          <div v-if="mode === 'debate'" class="section debate-panel">
+            <h2>正反方观点</h2>
+            <div class="stance-grid">
+              <label>
+                <span>正方</span>
+                <input v-model="proLabel" placeholder="例如：放走蚂蚁" />
+              </label>
+              <label>
+                <span>反方</span>
+                <input v-model="conLabel" placeholder="例如：踩扁蚂蚁" />
+              </label>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>{{ mode === 'debate' ? '双方共用的方向叶子' : '思考方向' }}</h2>
+            <p class="hint">
+              {{ mode === 'debate' ? '这些方向会同时生成到正方和反方下面，后续还能继续往下延展。' : '设置一级方向节点，引导孩子从不同角度思考。' }}
+            </p>
+
+            <div class="directions-list">
+              <div v-for="(dir, index) in activeDirections" :key="dir.id" class="direction-item">
+                <select v-model="dir.emoji" class="emoji-select">
+                  <option v-for="emoji in emojiOptions" :key="emoji" :value="emoji">{{ emoji }}</option>
+                </select>
+
+                <input
+                  v-model="dir.name"
+                  :placeholder="mode === 'debate' ? `方向 ${index + 1}：例如理由、后果、感受` : `方向 ${index + 1}：例如外形、生命`"
+                  class="direction-input"
+                />
+
+                <button v-if="activeDirections.length > 1" class="remove-btn" @click="removeDirection(index)">×</button>
+              </div>
+            </div>
+
+            <button v-if="activeDirections.length < 8" class="add-btn" @click="addDirection">＋ 添加方向</button>
+          </div>
+        </div>
+
+        <div class="setup-footer">
+          <button class="start-btn" :disabled="!canSubmit" @click="handleSubmit">
+            🌱 开始创建思维树
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -267,7 +269,41 @@ function applyDebatePreset() {
   max-width: 680px;
   width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.setup-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(92, 122, 62, 0.42) rgba(237, 244, 213, 0.5);
+}
+
+.setup-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.setup-scroll::-webkit-scrollbar-track {
+  margin: 14px 6px 14px 0;
+  background: rgba(237, 244, 213, 0.5);
+  border-radius: 999px;
+}
+
+.setup-scroll::-webkit-scrollbar-thumb {
+  background: rgba(92, 122, 62, 0.42);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.setup-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(92, 122, 62, 0.62);
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
 .setup-header {
@@ -290,11 +326,11 @@ function applyDebatePreset() {
 }
 
 .setup-body {
-  padding: 28px 30px;
+  padding: 28px 36px;
 }
 
 .section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .section h2 {
@@ -312,16 +348,18 @@ function applyDebatePreset() {
 .mode-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 6px;
+  gap: 0;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
   border-radius: 999px;
-  background: rgba(108, 123, 78, 0.18);
+  background: rgba(120, 139, 87, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.44);
 }
 
 .mode-tabs button {
   border: 0;
   border-radius: 999px;
-  padding: 12px 16px;
+  padding: 13px 16px;
   background: transparent;
   color: #415034;
   font-weight: 800;
@@ -329,8 +367,8 @@ function applyDebatePreset() {
 }
 
 .mode-tabs button.active {
-  background: rgba(255, 255, 244, 0.92);
-  box-shadow: 0 8px 18px rgba(55, 67, 38, 0.12);
+  background: rgba(255, 255, 244, 0.94);
+  box-shadow: 0 8px 18px rgba(55, 67, 38, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .theme-input,
@@ -444,7 +482,7 @@ function applyDebatePreset() {
 }
 
 .setup-footer {
-  padding: 0 30px 30px;
+  padding: 0 36px 32px;
   text-align: center;
 }
 

@@ -72,9 +72,13 @@ onUnmounted(() => {
 .page-edit {
   max-width: 720px;
   margin: 0 auto;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
 }
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  flex-shrink: 0;
 }
 .back-link {
   font-size: 0.875rem;
@@ -135,6 +139,29 @@ onUnmounted(() => {
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
   padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  /* Custom scrollbar with rounded corners */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+}
+
+.page-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.page-content::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 12px;
+}
+
+.page-content::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 12px;
+}
+
+.page-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.6);
 }
 
 /* Button */

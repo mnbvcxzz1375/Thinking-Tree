@@ -135,4 +135,11 @@ defineEmits<{
 .btn--primary:hover {
   background: #1d4ed8;
 }
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .activity-list__grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

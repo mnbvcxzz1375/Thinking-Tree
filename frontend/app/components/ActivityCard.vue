@@ -220,4 +220,29 @@ function formatDate(dateStr: string): string {
   background: #fef2f2;
   border-color: #f87171;
 }
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .activity-card {
+    padding: 1rem;
+  }
+  .activity-card__header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .activity-card__title {
+    font-size: 1rem;
+  }
+  .activity-card__meta {
+    flex-wrap: wrap;
+  }
+  .activity-card__actions {
+    flex-wrap: wrap;
+  }
+  .activity-card__actions .btn {
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+  }
+}
 </style>

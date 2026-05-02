@@ -78,12 +78,14 @@ onMounted(() => {
 .page-activities {
   max-width: 960px;
   margin: 0 auto;
+  padding: 0.75rem 1.75rem 2rem;
 }
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  gap: 1rem;
 }
 .page-header h1 {
   font-size: 1.5rem;
@@ -94,16 +96,18 @@ onMounted(() => {
 .page-subtitle {
   color: #6b7280;
   font-size: 0.875rem;
-  margin: 0.25rem 0 0;
+  margin: 0.45rem 0 0;
 }
 .page-filters {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
+  margin-bottom: 1.35rem;
+  padding: 1rem 1.25rem;
   background: #f9fafb;
   border-radius: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 .filter-label {
   display: inline-flex;
@@ -136,6 +140,7 @@ onMounted(() => {
   transition: all 0.15s;
   text-decoration: none;
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 .btn--primary {
   background: #2563eb;
@@ -144,5 +149,27 @@ onMounted(() => {
 }
 .btn--primary:hover {
   background: #1d4ed8;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .page-activities {
+    padding: 0.5rem 0.75rem 1.5rem;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-header h1 {
+    font-size: 1.25rem;
+  }
+  .page-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .page-filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

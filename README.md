@@ -24,9 +24,19 @@ A web-based interactive thinking tree system designed to help children develop c
 - 🧠 **Smart Node Placement** - AI analyzes speech content and suggests optimal tree placement
 - 🔄 **Similar Node Detection** - AI detects semantically similar nodes and prompts for merge
 - 📍 **Hierarchical Mounting** - New ideas can be attached to any level of the tree (not just root branches)
+- ⚖️ **Debate Mode** - Supports positive/negative thinking trees and classifies recorded ideas into the matching side
+- 📚 **Activity Management** - Create, edit, and delete activities with descriptions, teacher guidance, difficulty, age range, and activity mode
 - 🎨 **Child-Friendly UI** - Warm, nature-themed design with smooth animations
 - 📱 **Responsive Design** - Works on desktop, tablet, and mobile devices
 - 💾 **Local Persistence** - Tree state saved to localStorage automatically
+
+## 🧭 Activities and Debate Mode
+
+- **Normal thinking tree**: for open-ended topics such as "A tree", "My school", or "If I were a bird".
+- **Debate mode**: for topics with two positions, such as "release the ant / step on the ant". The tree is split visually into positive and negative sides, while shared direction leaves can be reused on both sides.
+- **Activity description**: explain what the activity discusses and what angles children should think from.
+- **Activity guidance**: write teacher-facing instructions, such as how to prompt follow-up questions and when to merge similar ideas.
+- **Delete activities**: the activity list and activity detail pages both include deletion actions. Deleting an activity also removes its associated data.
 
 ## 🛠 Tech Stack
 

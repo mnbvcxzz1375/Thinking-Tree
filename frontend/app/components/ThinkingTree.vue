@@ -1215,60 +1215,97 @@ function openExportDialog() {
   overflow: hidden;
   font-family: ui-rounded, 'Trebuchet MS', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
   touch-action: none;
-  background: #aeb49b;
+  background: #1a2e1a;
 }
 
+/* Into the Woods inspired background */
 .woods-background {
   position: absolute;
   inset: 0;
   z-index: 0;
   background:
-    linear-gradient(180deg, rgba(221, 212, 160, 0.54) 0%, rgba(164, 189, 165, 0.82) 50%, rgba(100, 148, 93, 0.92) 100%),
-    radial-gradient(ellipse at 50% 8%, rgba(236, 230, 183, 0.74) 0%, rgba(236, 230, 183, 0) 42%),
-    #a7b6a0;
+    /* Deep forest gradient - darker at bottom, lighter at top */
+    linear-gradient(180deg, 
+      rgba(26, 46, 26, 0.95) 0%,
+      rgba(34, 58, 34, 0.9) 30%,
+      rgba(42, 72, 42, 0.85) 60%,
+      rgba(52, 85, 52, 0.8) 100%
+    ),
+    /* Subtle light rays from above */
+    radial-gradient(ellipse at 50% 0%, rgba(180, 210, 160, 0.15) 0%, transparent 60%),
+    /* Forest texture overlay */
+    radial-gradient(ellipse at 20% 80%, rgba(60, 100, 60, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(70, 110, 70, 0.25) 0%, transparent 50%),
+    /* Base color */
+    #1a2e1a;
 }
 
 .soft-horizon {
   position: absolute;
   left: -5%;
   right: -5%;
-  bottom: 16vh;
-  height: 24vh;
+  bottom: 20vh;
+  height: 30vh;
   z-index: 0;
-  background: linear-gradient(180deg, rgba(207, 204, 146, 0), rgba(210, 194, 112, 0.35), rgba(78, 130, 82, 0.16));
-  filter: blur(14px);
+  background: linear-gradient(180deg, 
+    rgba(26, 46, 26, 0) 0%, 
+    rgba(34, 58, 34, 0.4) 40%,
+    rgba(42, 72, 42, 0.6) 70%,
+    rgba(52, 85, 52, 0.3) 100%
+  );
+  filter: blur(20px);
 }
 
 .hill-layer {
   position: absolute;
   left: -6%;
   right: -6%;
-  bottom: -8vh;
+  bottom: -10vh;
   z-index: 0;
-  height: 31vh;
+  height: 35vh;
   background-repeat: repeat-x;
-  background-size: 360px 210px;
+  background-size: 400px 250px;
   background-position: bottom center;
 }
 
 .hill-layer-back {
-  bottom: 7vh;
-  height: 21vh;
-  opacity: 0.9;
+  bottom: 8vh;
+  height: 25vh;
+  opacity: 0.7;
   background-image:
-    radial-gradient(ellipse at 48% 100%, #d3bd63 0 28%, rgba(211, 189, 99, 0) 29%),
-    radial-gradient(ellipse at 10% 100%, #83aa6d 0 20%, rgba(131, 170, 109, 0) 21%),
-    radial-gradient(ellipse at 78% 100%, #b2b46c 0 24%, rgba(178, 180, 108, 0) 25%);
-  filter: blur(0.5px);
+    /* Distant hills */
+    radial-gradient(ellipse at 30% 100%, rgba(52, 85, 52, 0.8) 0 35%, transparent 36%),
+    radial-gradient(ellipse at 70% 100%, rgba(62, 95, 62, 0.7) 0 30%, transparent 31%),
+    radial-gradient(ellipse at 50% 100%, rgba(42, 72, 42, 0.6) 0 40%, transparent 41%);
+  filter: blur(1px);
 }
 
 .hill-layer-front {
-  height: 30vh;
-  background-size: 430px 260px;
+  height: 32vh;
+  background-size: 500px 300px;
   background-image:
-    radial-gradient(ellipse at 15% 100%, #d4bd65 0 31%, rgba(212, 189, 101, 0) 32%),
-    radial-gradient(ellipse at 48% 100%, #80ab64 0 26%, rgba(128, 171, 100, 0) 27%),
-    radial-gradient(ellipse at 82% 100%, #ddc56e 0 35%, rgba(221, 197, 110, 0) 36%);
+    /* Foreground hills with more detail */
+    radial-gradient(ellipse at 20% 100%, rgba(62, 100, 62, 0.9) 0 28%, transparent 29%),
+    radial-gradient(ellipse at 55% 100%, rgba(72, 110, 72, 0.85) 0 32%, transparent 33%),
+    radial-gradient(ellipse at 85% 100%, rgba(52, 85, 52, 0.8) 0 25%, transparent 26%);
+}
+
+/* Add subtle particle/dust effect */
+.woods-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 200, 0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 60%, rgba(255, 255, 200, 0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 20%, rgba(255, 255, 200, 0.25) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 50%, rgba(255, 255, 200, 0.2) 0%, transparent 100%);
+  animation: floatParticles 20s ease-in-out infinite;
+}
+
+@keyframes floatParticles {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 #tree-container {
@@ -1294,14 +1331,14 @@ function openExportDialog() {
   min-height: 48px;
   max-width: min(360px, calc(100vw - 240px));
   padding: 0 22px;
-  border: 1px solid rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 999px;
-  background: rgba(255, 255, 244, 0.54);
-  color: #27311f;
+  background: rgba(26, 46, 26, 0.6);
+  color: #e8f0e8;
   font-size: 17px;
   font-weight: 900;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 14px 30px rgba(41, 48, 27, 0.12);
-  backdrop-filter: blur(16px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
   pointer-events: auto;
 }
 
@@ -1317,9 +1354,9 @@ function openExportDialog() {
   gap: 8px;
   padding: 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 244, 0.48);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66), 0 14px 30px rgba(41, 48, 27, 0.12);
-  backdrop-filter: blur(16px);
+  background: rgba(26, 46, 26, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
   pointer-events: auto;
 }
 
@@ -1329,8 +1366,8 @@ function openExportDialog() {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: rgba(255, 253, 237, 0.9);
-  color: #2f3328;
+  background: rgba(255, 255, 255, 0.15);
+  color: #e8f0e8;
   font-size: 18px;
   font-weight: 900;
   cursor: pointer;
@@ -1339,7 +1376,7 @@ function openExportDialog() {
 
 .zoom-controls button:hover {
   transform: translateY(-1px);
-  background: #fff9dc;
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .controls-bar {
@@ -1350,9 +1387,9 @@ function openExportDialog() {
   gap: 12px;
   padding: 8px;
   border-radius: 999px;
-  background: rgba(45, 48, 34, 0.28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 18px 42px rgba(30, 36, 22, 0.22);
-  backdrop-filter: blur(18px);
+  background: rgba(26, 46, 26, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 18px 42px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
   transform: translateX(-50%);
   pointer-events: auto;
 }
@@ -1367,8 +1404,8 @@ function openExportDialog() {
   padding: 0 20px;
   border: 0;
   border-radius: 999px;
-  background: rgba(255, 249, 220, 0.9);
-  color: #2d3226;
+  background: rgba(255, 255, 255, 0.15);
+  color: #e8f0e8;
   font-size: 15px;
   font-weight: 900;
   cursor: pointer;
@@ -1378,21 +1415,33 @@ function openExportDialog() {
 
 .control-btn:hover {
   transform: translateY(-2px);
-  background: #fff8d8;
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .record-btn {
-  background: linear-gradient(180deg, #f4d2ea 0%, #d973ca 100%);
-  color: #fff7ff;
+  background: linear-gradient(180deg, rgba(180, 100, 160, 0.8) 0%, rgba(150, 60, 130, 0.9) 100%);
+  color: #fff;
+}
+
+.record-btn:hover {
+  background: linear-gradient(180deg, rgba(200, 120, 180, 0.9) 0%, rgba(170, 80, 150, 1) 100%);
 }
 
 .add-btn {
-  background: linear-gradient(180deg, #e6edb4 0%, #98bd55 100%);
-  color: #25351d;
+  background: linear-gradient(180deg, rgba(120, 180, 80, 0.8) 0%, rgba(80, 140, 50, 0.9) 100%);
+  color: #fff;
+}
+
+.add-btn:hover {
+  background: linear-gradient(180deg, rgba(140, 200, 100, 0.9) 0%, rgba(100, 160, 70, 1) 100%);
 }
 
 .export-btn {
-  background: rgba(255, 249, 220, 0.92);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.export-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .btn-icon {
@@ -1407,11 +1456,11 @@ function openExportDialog() {
   width: min(420px, calc(100vw - 48px));
   padding: 20px;
   z-index: 200;
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 26px;
-  background: rgba(255, 255, 242, 0.78);
-  box-shadow: 0 22px 58px rgba(28, 34, 22, 0.24);
-  backdrop-filter: blur(22px);
+  background: rgba(26, 46, 26, 0.85);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(24px);
   pointer-events: auto;
 }
 
@@ -1424,7 +1473,7 @@ function openExportDialog() {
 
 .recorder-header h3 {
   margin: 0;
-  color: #26311f;
+  color: #e8f0e8;
   font-size: 16px;
   font-weight: 900;
 }
@@ -1435,10 +1484,14 @@ function openExportDialog() {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #424534;
+  background: rgba(255, 255, 255, 0.15);
+  color: #e8f0e8;
   font-size: 22px;
   cursor: pointer;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .analyzing-overlay {
@@ -1449,13 +1502,13 @@ function openExportDialog() {
   align-items: center;
   justify-content: center;
   border-radius: 26px;
-  background: rgba(255, 255, 242, 0.92);
+  background: rgba(26, 46, 26, 0.95);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(80, 102, 57, 0.18);
+  border: 4px solid rgba(120, 180, 80, 0.3);
   border-top-color: #7da747;
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -1471,8 +1524,8 @@ function openExportDialog() {
   margin-top: 14px;
   padding: 12px;
   border-radius: 16px;
-  background: rgba(230, 237, 180, 0.62);
-  color: #2e3726;
+  background: rgba(120, 180, 80, 0.2);
+  color: #e8f0e8;
   font-size: 14px;
 }
 
@@ -1483,10 +1536,10 @@ function openExportDialog() {
 .recording-error {
   margin-top: 14px;
   padding: 12px 14px;
-  border: 1px solid rgba(160, 75, 55, 0.22);
+  border: 1px solid rgba(200, 100, 80, 0.3);
   border-radius: 16px;
-  background: rgba(255, 231, 208, 0.72);
-  color: #6c2d20;
+  background: rgba(200, 100, 80, 0.2);
+  color: #f0d0c0;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.5;
@@ -1495,21 +1548,21 @@ function openExportDialog() {
 .similar-nodes-panel {
   margin-top: 14px;
   padding: 14px;
-  border: 1px solid rgba(100, 140, 80, 0.35);
+  border: 1px solid rgba(120, 180, 80, 0.3);
   border-radius: 16px;
-  background: rgba(230, 242, 210, 0.85);
+  background: rgba(120, 180, 80, 0.15);
 }
 
 .similar-nodes-header h4 {
   margin: 0 0 6px;
-  color: #2d3a24;
+  color: #e8f0e8;
   font-size: 15px;
   font-weight: 800;
 }
 
 .similar-nodes-header p {
   margin: 0 0 12px;
-  color: #4a5a3d;
+  color: rgba(232, 240, 232, 0.8);
   font-size: 13px;
 }
 
@@ -1526,13 +1579,13 @@ function openExportDialog() {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.1);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .similar-node-item:hover {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.2);
   transform: translateX(4px);
 }
 
@@ -1542,13 +1595,13 @@ function openExportDialog() {
 
 .similar-node-label {
   flex: 1;
-  color: #2d3a24;
+  color: #e8f0e8;
   font-size: 14px;
   font-weight: 600;
 }
 
 .similar-node-action {
-  color: #5a7a42;
+  color: #a0d080;
   font-size: 12px;
   font-weight: 700;
   padding: 4px 10px;
@@ -1575,28 +1628,28 @@ function openExportDialog() {
 }
 
 .btn--outline {
-  background: rgba(255, 255, 255, 0.8);
-  color: #3a4a32;
-  border: 1px solid rgba(100, 140, 80, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  color: #e8f0e8;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .btn--outline:hover {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .btn--ghost {
   background: transparent;
-  color: #6a7a5d;
+  color: rgba(232, 240, 232, 0.7);
 }
 
 .btn--ghost:hover {
-  background: rgba(100, 140, 80, 0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 :deep(.link) {
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: drop-shadow(0 9px 8px rgba(44, 31, 20, 0.16));
+  filter: drop-shadow(0 9px 8px rgba(0, 0, 0, 0.3));
 }
 
 :deep(.node) {
@@ -1608,23 +1661,23 @@ function openExportDialog() {
 }
 
 :deep(.main-trunk) {
-  stroke: rgba(255, 241, 190, 0.2);
+  stroke: rgba(255, 241, 190, 0.3);
   stroke-width: 1.5px;
 }
 
 :deep(.leaf-cluster-petal) {
-  stroke: rgba(248, 248, 214, 0.22);
+  stroke: rgba(248, 248, 214, 0.3);
   stroke-width: 1px;
 }
 
 :deep(.leaf-path) {
-  stroke: rgba(255, 255, 225, 0.5);
+  stroke: rgba(255, 255, 225, 0.6);
   stroke-width: 1.6;
   transition: filter 0.25s ease, transform 0.25s ease;
 }
 
 :deep(.node:hover .leaf-path) {
-  filter: url(#soft-shadow) brightness(1.08);
+  filter: url(#soft-shadow) brightness(1.2);
 }
 
 :deep(.text-bg) {

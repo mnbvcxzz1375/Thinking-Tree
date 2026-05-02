@@ -249,9 +249,11 @@ function handleSubmit() {
 <style scoped>
 .activity-form {
   max-width: 640px;
+  width: 100%;
+  padding-bottom: 1.25rem;
 }
 .activity-form__group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 .activity-form__group--checkbox {
   margin-top: 0.5rem;
@@ -277,6 +279,7 @@ function handleSubmit() {
   color: #111827;
   background: #fff;
   transition: border-color 0.15s;
+  box-sizing: border-box;
 }
 .activity-form__input:focus,
 .activity-form__textarea:focus,
@@ -299,10 +302,13 @@ function handleSubmit() {
 }
 .activity-form__mode-tabs {
   display: inline-flex;
-  gap: 0.35rem;
-  padding: 0.35rem;
+  gap: 0;
+  padding: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 999px;
   background: rgba(159, 181, 126, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  flex-wrap: wrap;
 }
 .activity-form__mode-tab {
   border: 0;
@@ -312,11 +318,12 @@ function handleSubmit() {
   color: #556347;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 .activity-form__mode-tab--active {
   background: #fbfaf0;
   color: #25351f;
-  box-shadow: 0 6px 16px rgba(76, 88, 57, 0.16);
+  box-shadow: 0 6px 16px rgba(76, 88, 57, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.68);
 }
 .activity-form__hint {
   margin: 0.45rem 0 0;
@@ -357,6 +364,7 @@ function handleSubmit() {
   gap: 0.75rem;
   padding-top: 1rem;
   border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
 }
 
 /* Button styles */
@@ -371,6 +379,7 @@ function handleSubmit() {
   cursor: pointer;
   transition: all 0.15s;
   border: 1px solid transparent;
+  min-width: 80px;
 }
 .btn:disabled {
   opacity: 0.6;
@@ -392,5 +401,22 @@ function handleSubmit() {
 }
 .btn--primary:hover:not(:disabled) {
   background: #1d4ed8;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .activity-form__row {
+    grid-template-columns: 1fr;
+  }
+  .activity-form__mode-tabs {
+    width: 100%;
+    justify-content: center;
+  }
+  .activity-form__actions {
+    flex-direction: column;
+  }
+  .activity-form__actions .btn {
+    width: 100%;
+  }
 }
 </style>

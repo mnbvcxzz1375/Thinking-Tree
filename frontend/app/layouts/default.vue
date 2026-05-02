@@ -95,7 +95,7 @@ const isTreeHome = computed(() => route.path === '/')
   flex: 1;
   position: relative;
   z-index: 1;
-  padding: 3rem 2rem 4rem;
+  padding: 3.5rem 2.5rem 4.5rem;
 }
 .layout-footer {
   position: relative;
@@ -242,7 +242,7 @@ const isTreeHome = computed(() => route.path === '/')
 .page-edit {
   width: min(1040px, calc(100vw - 64px));
   margin: 0 auto;
-  padding: 28px;
+  padding: 34px;
   border: 1px solid rgba(255, 255, 255, 0.36);
   border-radius: 30px;
   background: rgba(255, 255, 242, 0.64);
