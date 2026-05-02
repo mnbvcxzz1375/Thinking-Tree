@@ -38,10 +38,12 @@ alembic upgrade head
 ### Step 5: Run the Server
 
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload
 ```
 
 Server will be available at: `http://localhost:8765`
+
+The frontend dev proxy is configured for `http://localhost:8765/api`, so keep this port while running the Nuxt frontend locally.
 
 ## Verify Installation
 
@@ -148,7 +150,9 @@ psql -U user -d thinking_tree -c "SELECT 1"
 
 ### Port 8765 Already in Use
 
-Change port in `.env`:
+For local frontend development, stop the process using 8765 and keep the backend on 8765. The Nuxt dev proxy expects this port by default.
+
+If you are running the backend standalone, you can change port in `.env`:
 ```env
 PORT=8766
 ```

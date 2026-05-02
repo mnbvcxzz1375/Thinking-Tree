@@ -32,18 +32,16 @@ const theme = ref(props.initialTheme)
 const proLabel = ref(props.initialProLabel)
 const conLabel = ref(props.initialConLabel)
 const directions = ref<Direction[]>([
-  { id: 'dir-1', name: '', emoji: '🌿' },
-  { id: 'dir-2', name: '', emoji: '🍃' },
-  { id: 'dir-3', name: '', emoji: '🌱' },
+  { id: 'dir-1', name: '', emoji: '' },
+  { id: 'dir-2', name: '', emoji: '' },
+  { id: 'dir-3', name: '', emoji: '' },
 ])
 const debateDirections = ref<Direction[]>([
-  { id: 'debate-reason', name: '理由', emoji: '💬' },
-  { id: 'debate-result', name: '后果', emoji: '🌾' },
-  { id: 'debate-feeling', name: '感受', emoji: '💛' },
-  { id: 'debate-example', name: '例子', emoji: '🔎' },
+  { id: 'debate-reason', name: '理由', emoji: '' },
+  { id: 'debate-result', name: '后果', emoji: '' },
+  { id: 'debate-feeling', name: '感受', emoji: '' },
+  { id: 'debate-example', name: '例子', emoji: '' },
 ])
-
-const emojiOptions = ['🌿', '🍃', '🌱', '🌾', '🌵', '🌳', '🌸', '🌼', '🍀', '🍂', '💬', '💛', '🔎', '⭐']
 
 const activeDirections = computed(() => (mode.value === 'debate' ? debateDirections.value : directions.value))
 const canSubmit = computed(() => {
@@ -74,7 +72,7 @@ function addDirection() {
     target.push({
       id: `${mode.value}-dir-${Date.now()}`,
       name: '',
-      emoji: emojiOptions[Math.floor(Math.random() * emojiOptions.length)] || '🌿',
+      emoji: '',
     })
   }
 }
@@ -141,7 +139,7 @@ function applyPreset(preset: typeof presets[0]) {
   directions.value = preset.directions.map((name, i) => ({
     id: `dir-${i}`,
     name,
-    emoji: emojiOptions[i % emojiOptions.length] || '🌿',
+    emoji: '',
   }))
 }
 
@@ -151,10 +149,10 @@ function applyDebatePreset() {
   proLabel.value = '放走蚂蚁'
   conLabel.value = '踩扁蚂蚁'
   debateDirections.value = [
-    { id: 'reason', name: '理由', emoji: '💬' },
-    { id: 'life', name: '生命', emoji: '🌱' },
-    { id: 'result', name: '后果', emoji: '🌾' },
-    { id: 'feeling', name: '感受', emoji: '💛' },
+    { id: 'reason', name: '理由', emoji: '' },
+    { id: 'life', name: '生命', emoji: '' },
+    { id: 'result', name: '后果', emoji: '' },
+    { id: 'feeling', name: '感受', emoji: '' },
   ]
 }
 </script>
@@ -163,7 +161,7 @@ function applyDebatePreset() {
   <div class="setup-overlay">
     <div class="setup-card">
       <div class="setup-header">
-        <h1>🌳 创建思维树</h1>
+        <h1>创建思维树</h1>
         <p>设置活动主题和思考结构，开始孩子的表达整理</p>
       </div>
 
@@ -221,10 +219,6 @@ function applyDebatePreset() {
 
             <div class="directions-list">
               <div v-for="(dir, index) in activeDirections" :key="dir.id" class="direction-item">
-                <select v-model="dir.emoji" class="emoji-select">
-                  <option v-for="emoji in emojiOptions" :key="emoji" :value="emoji">{{ emoji }}</option>
-                </select>
-
                 <input
                   v-model="dir.name"
                   :placeholder="mode === 'debate' ? `方向 ${index + 1}：例如理由、后果、感受` : `方向 ${index + 1}：例如外形、生命`"
@@ -241,7 +235,7 @@ function applyDebatePreset() {
 
         <div class="setup-footer">
           <button class="start-btn" :disabled="!canSubmit" @click="handleSubmit">
-            🌱 开始创建思维树
+            开始创建思维树
           </button>
         </div>
       </div>
@@ -445,16 +439,6 @@ function applyDebatePreset() {
   display: flex;
   gap: 10px;
   align-items: center;
-}
-
-.emoji-select {
-  width: 54px;
-  padding: 10px;
-  border: 2px solid rgba(117, 155, 70, 0.22);
-  border-radius: 12px;
-  font-size: 18px;
-  background: white;
-  cursor: pointer;
 }
 
 .remove-btn {

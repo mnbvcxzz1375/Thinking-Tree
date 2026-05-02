@@ -16,6 +16,11 @@ dist/
 .venv/
 venv/
 
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
 # Audio temp files
 *.wav
 *.pcm

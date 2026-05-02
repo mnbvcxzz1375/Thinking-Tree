@@ -92,8 +92,10 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8765
+uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload
 ```
+
+The frontend development proxy expects the backend API at `http://localhost:8765/api`. If the backend is started on another port, activity loading and creation will time out.
 
 **Frontend:**
 ```bash

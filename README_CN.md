@@ -92,8 +92,10 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8765
+uvicorn app.main:app --host 127.0.0.1 --port 8765 --reload
 ```
+
+前端开发代理默认连接 `http://localhost:8765/api`。如果后端启动到了其他端口，活动列表加载和创建活动会等待到超时。
 
 **前端:**
 ```bash

@@ -32,6 +32,25 @@ const authToken = ref<string | null>(null)
 // Simple in-memory cache
 const cache = new Map<string, { data: unknown; expiry: number }>()
 
+function normalizeNetworkError(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return '后端服务未响应，请确认后端已在 8765 端口启动。'
+  }
+
+  if (error instanceof Error) {
+    const message = error.message || ''
+    if (message.includes('aborted') || message.includes('abort')) {
+      return '后端服务未响应，请确认后端已在 8765 端口启动。'
+    }
+    if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+      return '无法连接后端服务，请确认后端已在 8765 端口启动。'
+    }
+    return message
+  }
+
+  return '网络请求失败，请确认后端已在 8765 端口启动。'
+}
+
 /**
  * API client composable
  */
@@ -241,7 +260,7 @@ export function useApi() {
         return result
       } catch (error) {
         lastError = {
-          message: error instanceof Error ? error.message : 'Network error',
+          message: normalizeNetworkError(error),
           status: 0,
         }
 
@@ -320,7 +339,7 @@ export function useApi() {
       return {
         data: null,
         error: {
-          message: error instanceof Error ? error.message : 'Upload failed',
+          message: normalizeNetworkError(error),
           status: 0,
         },
         status: 0,
