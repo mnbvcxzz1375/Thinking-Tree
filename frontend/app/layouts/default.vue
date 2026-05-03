@@ -7,7 +7,6 @@ const isTreeHome = computed(() => route.path === '/')
   <div class="layout-default" :class="{ 'layout-default--home': isTreeHome }">
     <header class="layout-header">
       <nav class="layout-nav">
-        <NuxtLink to="/" class="logo">🌳 儿童思维树</NuxtLink>
         <div class="nav-links">
           <NuxtLink to="/" class="nav-link">首页</NuxtLink>
           <NuxtLink to="/activities" class="nav-link">活动管理</NuxtLink>
@@ -31,9 +30,26 @@ const isTreeHome = computed(() => route.path === '/')
   position: relative;
   overflow-x: hidden;
   background:
-    linear-gradient(180deg, rgba(221, 212, 160, 0.54) 0%, rgba(164, 189, 165, 0.82) 50%, rgba(100, 148, 93, 0.92) 100%),
-    radial-gradient(ellipse at 50% 8%, rgba(236, 230, 183, 0.74) 0%, rgba(236, 230, 183, 0) 42%),
-    #a7b6a0;
+    linear-gradient(180deg, rgba(65, 56, 102, 0.08) 0%, rgba(32, 28, 46, 0.16) 100%),
+    url('/images/itw-night-bg.png') center center / cover no-repeat,
+    #201c2e;
+}
+
+.layout-default::before,
+.layout-default::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+}
+
+.layout-default::before {
+  inset: 0;
+  z-index: 0;
+  background: rgba(18, 14, 28, 0.08);
+}
+
+.layout-default::after {
+  display: none;
 }
 .layout-header {
   position: sticky;
@@ -45,10 +61,13 @@ const isTreeHome = computed(() => route.path === '/')
 .layout-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1rem;
+  position: relative;
 }
 .logo {
+  position: absolute;
+  left: 0;
   display: inline-flex;
   align-items: center;
   min-height: 52px;
@@ -66,9 +85,10 @@ const isTreeHome = computed(() => route.path === '/')
   gap: 4px;
   padding: 6px;
   border-radius: 999px;
-  background: rgba(80, 82, 63, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 16px 32px rgba(40, 46, 30, 0.14);
-  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(54, 55, 75, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 16px 32px rgba(22, 18, 32, 0.2);
+  backdrop-filter: blur(24px);
 }
 .nav-link {
   display: inline-flex;
@@ -95,6 +115,8 @@ const isTreeHome = computed(() => route.path === '/')
   flex: 1;
   position: relative;
   z-index: 1;
+  display: flex;
+  justify-content: center;
   padding: 3.5rem 2.5rem 4.5rem;
 }
 .layout-footer {
@@ -110,12 +132,15 @@ const isTreeHome = computed(() => route.path === '/')
 .layout-default--home {
   height: 100vh;
   overflow: hidden;
-  background: #aeb49b;
+  background:
+    linear-gradient(180deg, rgba(65, 56, 102, 0.08) 0%, rgba(32, 28, 46, 0.16) 100%),
+    url('/images/itw-night-bg.png') center center / cover no-repeat,
+    #201c2e;
 }
 
 .layout-default--home .layout-header {
   position: fixed;
-  top: 30px;
+  top: 20px;
   left: 38px;
   right: 38px;
   padding: 0;
@@ -125,6 +150,7 @@ const isTreeHome = computed(() => route.path === '/')
 
 .layout-default--home .layout-nav {
   position: relative;
+  justify-content: center;
   min-height: 68px;
 }
 
@@ -148,17 +174,14 @@ const isTreeHome = computed(() => route.path === '/')
 }
 
 .layout-default--home .nav-links {
-  position: absolute;
-  left: 50%;
-  top: 8px;
   display: flex;
   gap: 4px;
   padding: 6px;
   border-radius: 999px;
-  background: rgba(80, 82, 63, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26), 0 16px 32px rgba(40, 46, 30, 0.14);
-  backdrop-filter: blur(18px);
-  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(54, 55, 75, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 16px 32px rgba(22, 18, 32, 0.2);
+  backdrop-filter: blur(24px);
 }
 
 .layout-default--home .nav-link {
@@ -200,6 +223,14 @@ const isTreeHome = computed(() => route.path === '/')
     flex-direction: column;
   }
 
+  .logo {
+    position: static;
+  }
+
+  .nav-links {
+    position: static;
+  }
+
   .layout-default--home .layout-header {
     top: 18px;
     left: 16px;
@@ -223,7 +254,6 @@ const isTreeHome = computed(() => route.path === '/')
   .layout-default--home .nav-links {
     position: static;
     width: fit-content;
-    transform: none;
   }
 
   .layout-default--home .nav-link {
@@ -240,14 +270,16 @@ const isTreeHome = computed(() => route.path === '/')
 .page-create,
 .page-detail,
 .page-edit {
+  box-sizing: border-box;
+  flex: 0 1 auto;
   width: min(1040px, calc(100vw - 64px));
-  margin: 0 auto;
+  margin: 0;
   padding: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.44);
   border-radius: 30px;
-  background: rgba(255, 255, 242, 0.64);
-  box-shadow: 0 24px 70px rgba(34, 42, 26, 0.18);
-  backdrop-filter: blur(18px);
+  background: rgba(255, 255, 242, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 26px 76px rgba(23, 19, 31, 0.22);
+  backdrop-filter: blur(24px);
 }
 
 .page-create,
@@ -281,8 +313,9 @@ const isTreeHome = computed(() => route.path === '/')
 .activity-list__error {
   border: 1px solid rgba(255, 255, 255, 0.42) !important;
   border-radius: 22px !important;
-  background: rgba(255, 255, 242, 0.72) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52), 0 14px 34px rgba(46, 54, 32, 0.1) !important;
+  background: rgba(255, 255, 242, 0.82) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58), 0 14px 34px rgba(46, 54, 32, 0.1) !important;
+  backdrop-filter: blur(14px) !important;
 }
 
 .activity-list__grid {
@@ -318,6 +351,13 @@ const isTreeHome = computed(() => route.path === '/')
 .btn--danger {
   border-radius: 999px !important;
   font-weight: 900 !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.btn:not(:disabled):hover,
+.back-link:hover {
+  transform: translateY(-2px) !important;
 }
 
 .back-link {
@@ -325,27 +365,49 @@ const isTreeHome = computed(() => route.path === '/')
   align-items: center;
   min-height: 38px;
   padding: 0 16px;
-  background: rgba(255, 255, 242, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  background: rgba(255, 255, 242, 0.64);
   color: #2b3722 !important;
   text-decoration: none !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58), 0 10px 20px rgba(28, 37, 22, 0.08) !important;
 }
 
 .btn--primary {
-  border-color: transparent !important;
-  background: linear-gradient(180deg, #e6edb4 0%, #98bd55 100%) !important;
+  min-height: 44px !important;
+  padding: 0 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.48) !important;
+  background: linear-gradient(180deg, rgba(222, 242, 167, 0.82) 0%, rgba(162, 202, 82, 0.82) 100%) !important;
   color: #25351d !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58), 0 14px 26px rgba(28, 37, 22, 0.12) !important;
+}
+
+.btn--primary:not(:disabled):hover {
+  background: linear-gradient(180deg, rgba(231, 247, 181, 0.9) 0%, rgba(172, 210, 93, 0.9) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68), 0 18px 34px rgba(28, 37, 22, 0.16) !important;
 }
 
 .btn--outline {
   border-color: rgba(255, 255, 255, 0.54) !important;
-  background: rgba(255, 255, 242, 0.76) !important;
+  background: rgba(255, 255, 242, 0.62) !important;
   color: #2f3328 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54), 0 10px 20px rgba(28, 37, 22, 0.08) !important;
+}
+
+.btn--outline:not(:disabled):hover {
+  background: rgba(255, 255, 242, 0.78) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68), 0 16px 30px rgba(28, 37, 22, 0.12) !important;
 }
 
 .btn--danger {
-  border-color: rgba(160, 75, 55, 0.22) !important;
-  background: rgba(255, 231, 208, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.42) !important;
+  background: rgba(225, 122, 95, 0.7) !important;
   color: #7b3020 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 10px 20px rgba(116, 50, 38, 0.12) !important;
+}
+
+.btn--danger:not(:disabled):hover {
+  background: rgba(225, 122, 95, 0.84) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 16px 30px rgba(116, 50, 38, 0.16) !important;
 }
 
 .activity-card__badge,
@@ -359,15 +421,18 @@ const isTreeHome = computed(() => route.path === '/')
 .activity-form__textarea,
 .activity-form__select,
 .filter-checkbox {
-  border-color: rgba(96, 113, 68, 0.2) !important;
-  border-radius: 14px !important;
+  border: 1px solid rgba(96, 113, 68, 0.2) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76), 0 8px 18px rgba(43, 50, 34, 0.05) !important;
 }
 
 .activity-form__input:focus,
 .activity-form__textarea:focus,
 .activity-form__select:focus {
-  border-color: #98bd55 !important;
-  box-shadow: 0 0 0 3px rgba(152, 189, 85, 0.18) !important;
+  border-color: rgba(152, 189, 85, 0.72) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 0 0 4px rgba(152, 189, 85, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.84) !important;
 }
 
 @media (max-width: 768px) {

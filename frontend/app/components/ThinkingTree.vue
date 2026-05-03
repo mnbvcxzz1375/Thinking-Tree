@@ -1215,97 +1215,49 @@ function openExportDialog() {
   overflow: hidden;
   font-family: ui-rounded, 'Trebuchet MS', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
   touch-action: none;
-  background: #1a2e1a;
+  background:
+    url('/images/itw-day-bg.png') center center / cover no-repeat,
+    #a5b995;
 }
 
-/* Into the Woods inspired background */
+/* Into the Woods day background */
 .woods-background {
   position: absolute;
   inset: 0;
   z-index: 0;
   background:
-    /* Deep forest gradient - darker at bottom, lighter at top */
-    linear-gradient(180deg, 
-      rgba(26, 46, 26, 0.95) 0%,
-      rgba(34, 58, 34, 0.9) 30%,
-      rgba(42, 72, 42, 0.85) 60%,
-      rgba(52, 85, 52, 0.8) 100%
-    ),
-    /* Subtle light rays from above */
-    radial-gradient(ellipse at 50% 0%, rgba(180, 210, 160, 0.15) 0%, transparent 60%),
-    /* Forest texture overlay */
-    radial-gradient(ellipse at 20% 80%, rgba(60, 100, 60, 0.3) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 70%, rgba(70, 110, 70, 0.25) 0%, transparent 50%),
-    /* Base color */
-    #1a2e1a;
+    url('/images/itw-day-bg.png') center center / cover no-repeat,
+    #a5b995;
 }
 
 .soft-horizon {
-  position: absolute;
-  left: -5%;
-  right: -5%;
-  bottom: 20vh;
-  height: 30vh;
-  z-index: 0;
-  background: linear-gradient(180deg, 
-    rgba(26, 46, 26, 0) 0%, 
-    rgba(34, 58, 34, 0.4) 40%,
-    rgba(42, 72, 42, 0.6) 70%,
-    rgba(52, 85, 52, 0.3) 100%
-  );
-  filter: blur(20px);
+  display: none;
 }
 
 .hill-layer {
-  position: absolute;
-  left: -6%;
-  right: -6%;
-  bottom: -10vh;
-  z-index: 0;
-  height: 35vh;
-  background-repeat: repeat-x;
-  background-size: 400px 250px;
-  background-position: bottom center;
+  display: none;
 }
 
 .hill-layer-back {
-  bottom: 8vh;
-  height: 25vh;
-  opacity: 0.7;
-  background-image:
-    /* Distant hills */
-    radial-gradient(ellipse at 30% 100%, rgba(52, 85, 52, 0.8) 0 35%, transparent 36%),
-    radial-gradient(ellipse at 70% 100%, rgba(62, 95, 62, 0.7) 0 30%, transparent 31%),
-    radial-gradient(ellipse at 50% 100%, rgba(42, 72, 42, 0.6) 0 40%, transparent 41%);
-  filter: blur(1px);
+  display: none;
 }
 
 .hill-layer-front {
-  height: 32vh;
-  background-size: 500px 300px;
-  background-image:
-    /* Foreground hills with more detail */
-    radial-gradient(ellipse at 20% 100%, rgba(62, 100, 62, 0.9) 0 28%, transparent 29%),
-    radial-gradient(ellipse at 55% 100%, rgba(72, 110, 72, 0.85) 0 32%, transparent 33%),
-    radial-gradient(ellipse at 85% 100%, rgba(52, 85, 52, 0.8) 0 25%, transparent 26%);
+  display: none;
 }
 
-/* Add subtle particle/dust effect */
 .woods-background::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: 
-    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 200, 0.3) 0%, transparent 100%),
-    radial-gradient(1px 1px at 40% 60%, rgba(255, 255, 200, 0.2) 0%, transparent 100%),
-    radial-gradient(1px 1px at 60% 20%, rgba(255, 255, 200, 0.25) 0%, transparent 100%),
-    radial-gradient(1px 1px at 80% 50%, rgba(255, 255, 200, 0.2) 0%, transparent 100%);
-  animation: floatParticles 20s ease-in-out infinite;
+  pointer-events: none;
 }
 
-@keyframes floatParticles {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+.woods-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 #tree-container {
@@ -1317,13 +1269,13 @@ function openExportDialog() {
 .controls-wrapper {
   position: absolute;
   inset: 0;
-  z-index: 100;
+  z-index: 1200;
   pointer-events: none;
 }
 
 .tree-title-pill {
   position: absolute;
-  top: 112px;
+  top: 20px;
   left: 38px;
   display: inline-flex;
   align-items: center;
@@ -1348,7 +1300,7 @@ function openExportDialog() {
 
 .zoom-controls {
   position: absolute;
-  top: 112px;
+  top: 20px;
   right: 38px;
   display: flex;
   gap: 8px;
@@ -1701,7 +1653,7 @@ function openExportDialog() {
 
 @media (max-width: 768px) {
   .tree-title-pill {
-    top: 92px;
+    top: 18px;
     left: 16px;
     max-width: calc(100vw - 118px);
     min-height: 42px;
@@ -1710,7 +1662,7 @@ function openExportDialog() {
   }
 
   .zoom-controls {
-    top: 92px;
+    top: 18px;
     right: 16px;
     gap: 5px;
     padding: 5px;

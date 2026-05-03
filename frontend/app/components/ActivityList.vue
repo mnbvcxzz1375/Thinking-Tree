@@ -11,8 +11,8 @@
     </div>
 
     <div v-else-if="activities.length === 0" class="activity-list__empty">
-      <div class="activity-list__empty-icon">📋</div>
-      <p>暂无活动</p>
+      <p class="activity-list__empty-title">暂无活动</p>
+      <p class="activity-list__empty-copy">创建一个活动后，就可以按主题组织孩子的想法。</p>
       <NuxtLink to="/activities/create" class="btn btn--primary btn--sm">
         创建第一个活动
       </NuxtLink>
@@ -84,15 +84,27 @@ defineEmits<{
 }
 .activity-list__empty {
   text-align: center;
-  padding: 3rem 0;
-  color: #6b7280;
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  padding: 4.5rem 1.5rem;
+  color: rgba(45, 54, 35, 0.72);
 }
-.activity-list__empty-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.75rem;
+
+.activity-list__empty-title {
+  margin: 0;
+  color: #26311f;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.activity-list__empty-copy {
+  max-width: 360px;
+  margin: 0;
+  line-height: 1.7;
 }
 .activity-list__empty .btn {
-  margin-top: 1rem;
+  margin-top: 0.7rem;
 }
 .activity-list__grid {
   display: grid;

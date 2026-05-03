@@ -247,22 +247,45 @@ function applyDebatePreset() {
 .setup-overlay {
   position: fixed;
   inset: 0;
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);
+  background:
+    linear-gradient(180deg, rgba(65, 56, 102, 0.08) 0%, rgba(32, 28, 46, 0.16) 100%),
+    url('/images/itw-night-bg.png') center center / cover no-repeat,
+    #201c2e;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 2000;
-  padding: 20px;
+  padding: 96px 32px 32px;
+  overflow: hidden;
+}
+
+.setup-overlay::before,
+.setup-overlay::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.setup-overlay::before {
+  inset: 0;
+  background: rgba(18, 14, 28, 0.08);
+}
+
+.setup-overlay::after {
+  display: none;
 }
 
 .setup-card {
-  background: rgba(255, 255, 245, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 22px;
-  box-shadow: 0 24px 70px rgba(50, 62, 35, 0.2);
-  max-width: 680px;
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 242, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 30px;
+  box-shadow: 0 24px 70px rgba(34, 42, 26, 0.18);
+  backdrop-filter: blur(18px);
+  max-width: 920px;
   width: 100%;
-  max-height: 90vh;
+  max-height: calc(100vh - 128px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -301,26 +324,32 @@ function applyDebatePreset() {
 }
 
 .setup-header {
-  text-align: center;
-  padding: 30px 30px 20px;
-  background: linear-gradient(135deg, #759b46 0%, #2f6b3a 100%);
-  border-radius: 22px 22px 0 0;
-  color: white;
+  text-align: left;
+  padding: 34px 42px 22px;
+  background: transparent;
+  color: #24301d;
 }
 
 .setup-header h1 {
   margin: 0 0 8px;
-  font-size: 28px;
+  font-size: 30px;
+  font-weight: 900;
 }
 
 .setup-header p {
   margin: 0;
-  opacity: 0.92;
-  font-size: 14px;
+  color: rgba(45, 54, 35, 0.72);
+  font-size: 15px;
 }
 
 .setup-body {
-  padding: 28px 36px;
+  margin: 0 42px 22px;
+  padding: 28px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 24px;
+  background: rgba(255, 255, 242, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52), 0 14px 34px rgba(46, 54, 32, 0.1);
+  backdrop-filter: blur(14px);
 }
 
 .section {
@@ -343,47 +372,55 @@ function applyDebatePreset() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
-  padding: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
   border-radius: 999px;
-  background: rgba(120, 139, 87, 0.18);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.44);
+  background: rgba(74, 78, 61, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 16px 30px rgba(43, 50, 34, 0.12);
+  backdrop-filter: blur(18px);
 }
 
 .mode-tabs button {
   border: 0;
   border-radius: 999px;
-  padding: 13px 16px;
+  min-height: 44px;
+  padding: 0 16px;
   background: transparent;
-  color: #415034;
-  font-weight: 800;
+  color: rgba(43, 58, 33, 0.72);
+  font-size: 15px;
+  font-weight: 900;
   cursor: pointer;
 }
 
 .mode-tabs button.active {
-  background: rgba(255, 255, 244, 0.94);
-  box-shadow: 0 8px 18px rgba(55, 67, 38, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 244, 0.96);
+  color: #24341f;
+  box-shadow: 0 12px 24px rgba(55, 67, 38, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .theme-input,
 .direction-input,
 .stance-grid input {
   width: 100%;
-  padding: 12px 14px;
-  border: 2px solid rgba(117, 155, 70, 0.22);
-  border-radius: 12px;
-  font-size: 15px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  min-height: 52px;
+  padding: 0 18px;
+  border: 1px solid rgba(96, 113, 68, 0.2);
+  border-radius: 18px;
+  font-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76), 0 8px 18px rgba(43, 50, 34, 0.05);
+  color: #283520;
 }
 
 .theme-input:focus,
 .direction-input:focus,
 .stance-grid input:focus {
   outline: none;
-  border-color: #8fbd47;
-  box-shadow: 0 0 0 3px rgba(143, 189, 71, 0.18);
+  border-color: rgba(143, 189, 71, 0.72);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 4px rgba(143, 189, 71, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.84);
 }
 
 .presets {
@@ -393,26 +430,30 @@ function applyDebatePreset() {
 }
 
 .preset-btn {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 2px solid rgba(117, 155, 70, 0.2);
+  min-height: 42px;
+  padding: 0 18px;
+  background: rgba(255, 255, 245, 0.78);
+  border: 1px solid rgba(117, 155, 70, 0.22);
   border-radius: 20px;
   color: #405030;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 900;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64), 0 8px 18px rgba(43, 50, 34, 0.06);
 }
 
 .preset-btn:hover,
 .preset-btn--debate {
-  background: #eef5c4;
-  border-color: #97bb4d;
+  background: rgba(238, 245, 196, 0.88);
+  border-color: rgba(151, 187, 77, 0.8);
 }
 
 .debate-panel {
   padding: 16px;
   border-radius: 18px;
-  background: rgba(236, 242, 196, 0.58);
+  background: rgba(236, 242, 196, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.44);
 }
 
 .stance-grid {
@@ -442,44 +483,49 @@ function applyDebatePreset() {
 }
 
 .remove-btn {
-  width: 34px;
-  height: 34px;
-  background: #d86f55;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  background: linear-gradient(180deg, rgba(225, 125, 99, 0.95) 0%, rgba(206, 96, 73, 0.96) 100%);
   color: white;
   border: none;
   border-radius: 50%;
   font-size: 20px;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 20px rgba(142, 64, 45, 0.16);
 }
 
 .add-btn {
   width: 100%;
-  padding: 12px;
-  background: rgba(227, 242, 253, 0.66);
-  border: 2px dashed #8bbbd7;
-  border-radius: 12px;
+  min-height: 52px;
+  padding: 0 16px;
+  background: rgba(227, 242, 253, 0.5);
+  border: 2px dashed rgba(139, 187, 215, 0.78);
+  border-radius: 18px;
   color: #23617d;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   cursor: pointer;
   margin-top: 10px;
 }
 
 .setup-footer {
-  padding: 0 36px 32px;
+  padding: 0 42px 34px;
   text-align: center;
 }
 
 .start-btn {
   width: 100%;
-  padding: 16px 32px;
-  background: linear-gradient(135deg, #cce979 0%, #8fbd47 100%);
+  min-height: 58px;
+  padding: 0 32px;
+  background: linear-gradient(180deg, #dceea2 0%, #a8ca58 100%);
   color: #24341f;
   border: none;
-  border-radius: 16px;
+  border-radius: 20px;
   font-size: 18px;
   font-weight: 900;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48), 0 14px 26px rgba(28, 37, 22, 0.12);
 }
 
 .start-btn:disabled {
@@ -488,6 +534,28 @@ function applyDebatePreset() {
 }
 
 @media (max-width: 640px) {
+  .setup-overlay {
+    padding: 92px 14px 18px;
+  }
+
+  .setup-card {
+    max-height: calc(100vh - 110px);
+    border-radius: 24px;
+  }
+
+  .setup-header {
+    padding: 24px 22px 16px;
+  }
+
+  .setup-body {
+    margin: 0 18px 18px;
+    padding: 22px 18px;
+  }
+
+  .setup-footer {
+    padding: 0 18px 24px;
+  }
+
   .stance-grid,
   .mode-tabs {
     grid-template-columns: 1fr;
